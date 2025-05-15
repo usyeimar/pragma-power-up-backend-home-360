@@ -1,0 +1,134 @@
+services:
+  service-discovery:
+    build:
+      context: ./service-discovery
+    container_name: service-discovery
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-net
+
+  postgres-db:
+    image: pgvector/pgvector:pg17
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: db_app_user
+      POSTGRES_PASSWORD: db_app_password
+      POSTGRES_DB: default_app_db
+    volumes:
+      - postgres-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db_app_user -d default_app_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  service-user:
+    build:
+      context: ./service-user
+    container_name: service-user
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/user_service_db
+      SPRING_DATASOURCE_USERNAME: db_app_user
+      SPRING_DATASOURCE_PASSWORD: db_app_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8081
+    depends_on:
+      service-discovery:
+        condition: service_started
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  service-home:
+    build:
+      context: ./service-home
+    container_name: service-home
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/home_service_db
+      SPRING_DATASOURCE_USERNAME: db_app_user
+      SPRING_DATASOURCE_PASSWORD: db_app_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8082
+    depends_on:
+      service-discovery:
+        condition: service_started
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  service-visits:
+    build:
+      context: ./service-visits
+    container_name: service-visits
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/visits_service_db
+      SPRING_DATASOURCE_USERNAME: db_app_user
+      SPRING_DATASOURCE_PASSWORD: db_app_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8083
+    depends_on:
+      service-discovery:
+        condition: service_started
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  service-transactions:
+    build:
+      context: ./service-transactions
+    container_name: service-transactions
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/transactions_service_db
+      SPRING_DATASOURCE_USERNAME: db_app_user
+      SPRING_DATASOURCE_PASSWORD: db_app_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8084
+    depends_on:
+      service-discovery:
+        condition: service_started
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-discovery:8761/eureka
+      SERVER_PORT: 8080
+    depends_on:
+      service-discovery:
+        condition: service_started
+      service-user:
+        condition: service_started
+      service-home:
+        condition: service_started
+      service-visits:
+        condition: service_started
+      service-transactions:
+        condition: service_started
+    networks:
+      - microservices-net
+
+volumes:
+  postgres-db-data:
+
+networks:
+  microservices-net:
+    driver: bridge

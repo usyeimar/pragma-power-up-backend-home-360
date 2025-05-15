@@ -1,0 +1,13 @@
+
+### GET all categories
+GET {{url}}/api/{{version}}/categories
+Authorization: Basic {{username}} {{password}}
+
+### Create a new category
+POST {{url}}/api/{{version}}/categories
+Content-Type: application/json
+
+{
+    "name": "Category 3",
+    "description": "Description 4"
+}
