@@ -11,6 +11,7 @@ import com.pragma.home360.home.infrastructure.adapters.persistence.*;
 import com.pragma.home360.home.infrastructure.mappers.*;
 import com.pragma.home360.home.infrastructure.repositories.mysql.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -124,7 +125,21 @@ public class BeanConfiguration {
 
 
     @Bean
-    public PropertyService propertyService(PropertyPersistencePort propertyPersistencePort, PropertyDtoMapper propertyDtoMapper) {
-        return new PropertyServiceImpl(propertyPersistencePort, propertyDtoMapper);
+    public PropertyService propertyService(PropertyServicePort propertyServicePort, PropertyDtoMapper propertyDtoMapper) {
+        return new PropertyServiceImpl(propertyServicePort, propertyDtoMapper);
+    }
+
+    @Bean
+    public PropertyServicePort propertyServicePort(
+            PropertyPersistencePort propertyPersistencePort,
+            LocationPersistencePort locationPersistencePort,
+            CategoryPersistencePort categoryPersistencePort
+    ) {
+
+        return new PropertyUseCase(
+                propertyPersistencePort,
+                locationPersistencePort,
+                categoryPersistencePort
+        );
     }
 }

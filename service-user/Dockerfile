@@ -5,6 +5,7 @@ COPY gradlew .
 COPY build.gradle .
 COPY settings.gradle .
 COPY src src
+RUN chmod +x ./gradlew
 RUN ./gradlew bootJar -x test --no-daemon
 
 FROM amazoncorretto:17-alpine as runtime

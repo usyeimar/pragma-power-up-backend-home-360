@@ -64,4 +64,22 @@ public class PropertyEntity {
     private LocalDateTime updatedAt;
 
 
+    @Override
+    public String toString() {
+        return "PropertyEntity{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", numberOfRooms=" + numberOfRooms +
+                ", numberOfBathrooms=" + numberOfBathrooms +
+                ", price=" + price +
+                ", activePublicationDate=" + activePublicationDate +
+                ", publicationStatus=" + publicationStatus +
+                ", location=" + location +
+                ", category=" + category +
+                ", images=" + images +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
+    }
 }

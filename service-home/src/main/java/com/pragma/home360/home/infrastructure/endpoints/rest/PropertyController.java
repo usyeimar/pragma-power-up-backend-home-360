@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/properties")
 @Tag(name = "Propiedades", description = "Gestión de propiedades")
@@ -22,7 +24,7 @@ public class PropertyController {
 
     @PostMapping
     public PropertyResponse createProperty(@RequestBody @Valid SavePropertyRequest request) {
-
         return propertyService.saveProperty(request);
     }
+
 }
