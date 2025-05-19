@@ -57,6 +57,7 @@ public class DataInitializer implements CommandLineRunner {
                 defaultUser.setBirthDate(LocalDate.now().minusYears(25));
                 defaultUser.setEmail(defaultUserEmail);
                 defaultUser.setPassword(defaultUserPassword);
+                defaultUser.setActive(true);
 
                 UserModel createdUser = userServicePort.registerUser(defaultUser);
 

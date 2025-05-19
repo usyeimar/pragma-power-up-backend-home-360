@@ -45,10 +45,28 @@ services:
     networks:
       - microservices-net
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U db_app_user -d default_app_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U db_app_user -d postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@example.com" 
+      PGADMIN_DEFAULT_PASSWORD: "adminpassword"  
+      PGADMIN_LISTEN_PORT: 80 
+    ports:
+      - "5050:80" 
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - microservices-net
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    restart: unless-stopped
 
   service-user:
     build:
@@ -128,6 +146,7 @@ services:
 
 volumes:
   postgres-db-data:
+  pgadmin-data:
 
 networks:
   microservices-net:

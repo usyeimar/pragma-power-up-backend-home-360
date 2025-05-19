@@ -1,15 +1,22 @@
 FROM amazoncorretto:17 AS build
 WORKDIR /app
+
 COPY gradle gradle
 COPY gradlew .
 COPY build.gradle .
 COPY settings.gradle .
-COPY src src
+
 RUN chmod +x ./gradlew
+
+RUN ./gradlew dependencies --no-daemon || ./gradlew --refresh-dependencies --no-daemon || echo "Attempting to download dependencies"
+
+COPY src src
+
 RUN ./gradlew bootJar -x test --no-daemon
 
-FROM amazoncorretto:17-alpine as runtime
+FROM amazoncorretto:17-alpine AS runtime
 WORKDIR /app
+
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 COPY --from=build --chown=spring:spring /app/build/libs/*.jar app.jar

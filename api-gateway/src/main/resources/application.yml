@@ -45,4 +45,13 @@ eureka:
     register-with-eureka: true
   instance:
     instance-id: ${spring.application.name}:${spring.application.instance_id:${random.uuid}}
-    prefer-ip-address: true #
+    prefer-ip-address: true
+
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:secret}
+    expiration: ${JWT_EXPIRATION:3600}
+    token-prefix: ${JWT_TOKEN_PREFIX:Bearer }
+    header-string: ${JWT_HEADER_STRING:Authorization}
+    token-type: ${JWT_TOKEN_TYPE:JWT}
