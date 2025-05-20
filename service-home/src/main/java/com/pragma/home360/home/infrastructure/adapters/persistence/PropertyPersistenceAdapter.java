@@ -1,6 +1,6 @@
 package com.pragma.home360.home.infrastructure.adapters.persistence;
 
-import com.pragma.home360.home.application.dto.request.filters.PropertyFilterModel;
+import com.pragma.home360.home.application.dto.request.filters.PropertyFilterRequest;
 import com.pragma.home360.home.domain.model.PropertyModel;
 import com.pragma.home360.home.domain.ports.out.PropertyPersistencePort;
 import com.pragma.home360.home.domain.utils.pagination.PagedResult;
@@ -31,7 +31,7 @@ public class PropertyPersistenceAdapter implements PropertyPersistencePort {
     }
 
     @Override
-    public PagedResult<PropertyModel> getAllProperties(PropertyFilterModel propertyFilterModel) {
+    public PagedResult<PropertyModel> getAllProperties(PropertyFilterRequest propertyFilterModel) {
         return null;
     }
 

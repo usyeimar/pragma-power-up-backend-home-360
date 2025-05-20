@@ -4,16 +4,16 @@ public class NeighborhoodModel {
     private Long id;
     private String name;
     private String description;
-    private Long cityId;
+    private CityModel city;
 
     public NeighborhoodModel() {
     }
 
-    public NeighborhoodModel(Long id, String name, String description, Long cityId) {
+    public NeighborhoodModel(Long id, String name, String description, CityModel city) {
         this.id = id;
         this.name = name;
         this.description = description;
-        this.cityId = cityId;
+        this.city = city;
     }
 
     public Long getId() {
@@ -40,12 +40,12 @@ public class NeighborhoodModel {
         this.description = description;
     }
 
-    public Long getCityId() {
-        return cityId;
+    public CityModel getCity() {
+        return city;
     }
 
-    public void setCityId(Long cityId) {
-        this.cityId = cityId;
+    public void setCity(CityModel city) {
+        this.city = city;
     }
 
     @Override
@@ -54,7 +54,8 @@ public class NeighborhoodModel {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", description='" + description + '\'' +
-                ", cityId=" + cityId +
+                ", city=" + city +
                 '}';
+
     }
 }

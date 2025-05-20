@@ -41,8 +41,8 @@ public class NeighborhoodUseCase implements NeighborhoodServicePort {
 
         validateCustom(
                 cityId -> cityPersistencePort.getCityById(cityId).isPresent(),
-                neighborhood.getCityId(),
-                String.format(DEPARTMENT_NOT_FOUND, neighborhood.getCityId()),
+                neighborhood.getCity().getId(),
+                String.format(DEPARTMENT_NOT_FOUND, neighborhood.getCity().getId()),
                 ModelNotFoundException.class.getName()
         );
 

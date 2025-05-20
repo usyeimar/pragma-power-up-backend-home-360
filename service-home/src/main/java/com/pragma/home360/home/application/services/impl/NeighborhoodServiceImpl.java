@@ -36,16 +36,11 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
 
         NeighborhoodResponse baseResponse = neighborhoodDtoMapper.toResponse(savedNeighborhood);
 
-        String cityName = cityServicePort.getCityById(request.cityId())
-                .map(CityModel::getName)
-                .orElse(null);
-
         return new NeighborhoodResponse(
                 baseResponse.id(),
                 baseResponse.name(),
                 baseResponse.description(),
-                baseResponse.cityId(),
-                cityName
+                baseResponse.city()
         );
     }
 
@@ -56,7 +51,7 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
 
         NeighborhoodResponse baseResponse = neighborhoodDtoMapper.toResponse(neighborhoodModel);
 
-        String cityName = cityServicePort.getCityById(neighborhoodModel.getCityId())
+        String cityName = cityServicePort.getCityById(neighborhoodModel.getCity().getId())
                 .map(CityModel::getName)
                 .orElse(null);
 
@@ -64,8 +59,7 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
                 baseResponse.id(),
                 baseResponse.name(),
                 baseResponse.description(),
-                baseResponse.cityId(),
-                cityName
+                baseResponse.city()
         );
     }
 
@@ -84,7 +78,7 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
                         filter.endDate()
                 ));
 
-        List<NeighborhoodResponse> neighborhoods = enhanceNeighborhoodResponses(neighborhoodPage.content());
+        List<NeighborhoodResponse> neighborhoods = neighborhoodDtoMapper.fromModelListToResponseList(neighborhoodPage.content());
 
         return new PaginatedResponse<>(
                 neighborhoods,
@@ -108,7 +102,7 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
                 filter.endDate()
         ));
 
-        List<NeighborhoodResponse> neighborhoods = enhanceNeighborhoodResponses(neighborhoodPage.content());
+        List<NeighborhoodResponse> neighborhoods = neighborhoodDtoMapper.fromModelListToResponseList(neighborhoodPage.content());
 
         return new PaginatedResponse<>(
                 neighborhoods,
@@ -120,22 +114,4 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
     }
 
 
-    private List<NeighborhoodResponse> enhanceNeighborhoodResponses(List<NeighborhoodModel> models) {
-        return models.stream()
-                .map(model -> {
-                    NeighborhoodResponse baseResponse = neighborhoodDtoMapper.toResponse(model);
-                    String cityName = cityServicePort.getCityById(model.getCityId())
-                            .map(CityModel::getName)
-                            .orElse(null);
-
-                    return new NeighborhoodResponse(
-                            baseResponse.id(),
-                            baseResponse.name(),
-                            baseResponse.description(),
-                            baseResponse.cityId(),
-                            cityName
-                    );
-                })
-                .collect(Collectors.toList());
-    }
 }

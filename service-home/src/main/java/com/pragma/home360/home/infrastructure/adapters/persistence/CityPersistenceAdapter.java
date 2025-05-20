@@ -41,11 +41,10 @@ public class CityPersistenceAdapter implements CityPersistencePort {
     }
 
     @Override
-    public List<CityModel> getAllCities(int page, int size) {
+    public PagedResult<CityModel> getAllCities(int page, int size) {
         var pageable = PaginationUtils.createPageable(page, size, "id", null);
-        return cityRepository.findAll(pageable)
-                .map(cityEntityMapper::toModel)
-                .getContent();
+
+        return PaginationUtils.toPagedResult(cityRepository.findAll(pageable).map(cityEntityMapper::toModel));
     }
 
     @Override
@@ -61,10 +60,10 @@ public class CityPersistenceAdapter implements CityPersistencePort {
     @Override
     public PagedResult<CityModel> getAllCities(FilterModel filter) {
         var pageable = PaginationUtils.createPageable(
-            filter.page(),
-            filter.size(),
-            filter.sortField(),
-            filter.direction()
+                filter.page(),
+                filter.size(),
+                filter.sortField(),
+                filter.direction()
         );
 
         var page = cityRepository.findAll(pageable);

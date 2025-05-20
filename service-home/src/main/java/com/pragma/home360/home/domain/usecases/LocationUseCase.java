@@ -33,18 +33,18 @@ public class LocationUseCase implements LocationServicePort {
                 neighborhoodId -> neighborhoodPersistencePort
                         .getNeighborhoodById(neighborhoodId)
                         .isPresent(),
-                location.getNeighborhoodId(),
-                String.format(NEIGHBORHOOD_NOT_FOUND, location.getNeighborhoodId()),
+                location.getNeighborhood().getId(),
+                String.format(NEIGHBORHOOD_NOT_FOUND, location.getNeighborhood().getId()),
                 null
         );
 
-        if (location.getCityId() != null) {
+        if (location.getCity().getId() != null) {
             validateCustom(
                     cityId -> cityPersistencePort
                             .getCityById(cityId)
                             .isPresent(),
-                    location.getCityId(),
-                    String.format(CITY_NOT_FOUND, location.getCityId()),
+                    location.getCity().getId(),
+                    String.format(CITY_NOT_FOUND, location.getCity().getId()),
                     null
 
             );

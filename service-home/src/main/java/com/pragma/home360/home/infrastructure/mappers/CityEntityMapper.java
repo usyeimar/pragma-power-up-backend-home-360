@@ -7,6 +7,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 import org.mapstruct.ReportingPolicy;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CityEntityMapper {
 
@@ -14,7 +16,9 @@ public interface CityEntityMapper {
             @Mapping(source = "name", target = "name"),
             @Mapping(source = "description", target = "description"),
             @Mapping(source = "id", target = "id"),
-            @Mapping(source = "department.id", target = "departmentId")
+            @Mapping(source = "department.id", target = "department.id"),
+            @Mapping(source = "department.name", target = "department.name"),
+            @Mapping(source = "department.description", target = "department.description"),
     })
     CityModel toModel(CityEntity entity);
 
@@ -24,4 +28,8 @@ public interface CityEntityMapper {
             @Mapping(source = "departmentId", target = "department.id")
     })
     CityEntity toEntity(CityModel model);
+
+
+    List<CityModel> toModelList(List<CityEntity> entities);
+
 }

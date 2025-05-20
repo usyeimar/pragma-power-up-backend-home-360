@@ -14,7 +14,9 @@ public interface CityDtoMapper {
             @Mapping(source = "id", target = "id"),
             @Mapping(source = "name", target = "name"),
             @Mapping(source = "description", target = "description"),
-            @Mapping(source = "departmentId", target = "departmentId")
+            @Mapping(source = "department.id", target = "department.id"),
+            @Mapping(source = "department.name", target = "department.name"),
+            @Mapping(source = "department.description", target = "department.description")
     })
     CityResponse modelToResponse(CityModel cityModel);
 

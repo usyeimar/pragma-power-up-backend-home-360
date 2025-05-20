@@ -1,5 +1,6 @@
 package com.pragma.home360.home.application.services.impl;
 
+import com.pragma.home360.home.application.dto.response.CategoryResponse;
 import com.pragma.home360.home.application.dto.response.PaginatedResponse;
 import com.pragma.home360.home.application.dto.request.filters.FilterRequest;
 import com.pragma.home360.home.application.dto.request.SaveCityRequest;
@@ -8,6 +9,7 @@ import com.pragma.home360.home.application.mappers.CityDtoMapper;
 import com.pragma.home360.home.application.services.CityService;
 import com.pragma.home360.home.domain.model.CityModel;
 import com.pragma.home360.home.domain.ports.in.CityServicePort;
+import com.pragma.home360.home.domain.utils.pagination.PagedResult;
 
 import java.util.List;
 
@@ -31,17 +33,23 @@ public class CityServiceImpl implements CityService {
 
     @Override
     public PaginatedResponse<CityResponse> getAllCities(FilterRequest paginationRequest) {
+
         int page = paginationRequest.page();
         int size = paginationRequest.size();
 
-        List<CityModel> cities = cityServicePort.getAllCities(page, size);
+        PagedResult<CityModel> cities = cityServicePort.getAllCities(page, size);
         long totalCount = cityServicePort.getCityCount();
 
-        List<CityResponse> cityResponses = cityDtoMapper.toResponseList(cities);
-
-        int totalPages = size > 0 ? (int) Math.ceil((double) totalCount / size) : 0;
-
-        return new PaginatedResponse<>(cityResponses, page, size, totalPages, totalCount);
+        return new PaginatedResponse<>(
+                cities.content()
+                        .stream()
+                        .map(cityDtoMapper::modelToResponse)
+                        .toList(),
+                page,
+                size,
+                cities.totalPages(),
+                totalCount
+        );
 
     }
 

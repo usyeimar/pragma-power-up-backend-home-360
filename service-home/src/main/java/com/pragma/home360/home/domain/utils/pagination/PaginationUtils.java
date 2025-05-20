@@ -8,7 +8,7 @@ import org.springframework.data.domain.Sort;
 public class PaginationUtils {
     
     private PaginationUtils() {
-        // Constructor privado para evitar instanciación
+
     }
 
     public static Pageable createPageable(Integer page, Integer size, String sortField, Sort.Direction direction) {

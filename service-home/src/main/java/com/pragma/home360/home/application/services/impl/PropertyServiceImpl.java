@@ -1,13 +1,13 @@
 package com.pragma.home360.home.application.services.impl;
 
 import com.pragma.home360.home.application.dto.request.SavePropertyRequest;
-import com.pragma.home360.home.application.dto.request.filters.PropertyFilterModel;
+import com.pragma.home360.home.application.dto.request.filters.PropertyFilterRequest;
 import com.pragma.home360.home.application.dto.response.PropertyResponse;
 import com.pragma.home360.home.application.mappers.PropertyDtoMapper;
 import com.pragma.home360.home.application.services.PropertyService;
+import com.pragma.home360.home.domain.model.PropertyFilterModel;
 import com.pragma.home360.home.domain.model.PropertyModel;
 import com.pragma.home360.home.domain.ports.in.PropertyServicePort;
-import com.pragma.home360.home.domain.ports.out.PropertyPersistencePort;
 import com.pragma.home360.home.domain.utils.pagination.PagedResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,10 +24,8 @@ public class PropertyServiceImpl implements PropertyService {
     public PropertyResponse saveProperty(SavePropertyRequest propertyRequest) {
 
         PropertyModel propertyModel = propertyDtoMapper.fromRequestToModel(propertyRequest);
-        System.out.println(propertyModel);
         PropertyModel savedProperty = propertyServicePort.saveProperty(propertyModel);
 
-        System.out.println(savedProperty);
         return propertyDtoMapper.fromModelToResponse(savedProperty);
     }
 
@@ -37,8 +35,10 @@ public class PropertyServiceImpl implements PropertyService {
     }
 
     @Override
-    public PagedResult<PropertyModel> getProperties(PropertyFilterModel propertyFilterModel) {
-        return null;
+    public PagedResult<PropertyModel> getAllProperties(PropertyFilterRequest propertyFilterRequest) {
+        PropertyFilterModel propertyFilterModel = propertyDtoMapper.fromFilterRequestToModel(propertyFilterRequest);
+        PagedResult<PropertyModel> pagedResult = propertyServicePort.getAllProperties(propertyFilterModel);
+        return pagedResult;
     }
 
     @Override

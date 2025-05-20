@@ -8,7 +8,7 @@ public record LocationSearchResponse(@Schema(description = "Identificador de la 
                                      @Schema(description = "Latitud de la ubicación", example = "6.2518401") Double latitude,
                                      @Schema(description = "Longitud de la ubicación", example = "-75.5635925") Double longitude,
                                      @Schema(description = "Punto de referencia", example = "Cerca al parque principal") String referencePoint,
-                                     @Schema(description = "Nombre del barrio", example = "El Poblado") String neighborhoodName,
-                                     @Schema(description = "Nombre de la ciudad", example = "Medellín") String cityName,
-                                     @Schema(description = "Nombre del departamento", example = "Antioquia") String departmentName) {
+                                     NeighborhoodResponse neighborhood,
+                                     CityResponse city
+) {
 }

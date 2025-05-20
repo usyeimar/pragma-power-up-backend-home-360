@@ -5,10 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Adaptador que implementa el puerto de codificación de contraseñas del dominio
- * utilizando BCrypt como algoritmo de codificación.
- */
+
 @Component
 @RequiredArgsConstructor
 public class BCryptPasswordEncoderAdapter implements PasswordEncoderPort {

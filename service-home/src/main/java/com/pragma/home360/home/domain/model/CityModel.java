@@ -6,12 +6,13 @@ public class CityModel {
     private String name;
     private String description;
     private Long departmentId;
+    private DepartmentModel department;
 
-    public CityModel(Long id, String name, String description, Long departmentId) {
+    public CityModel(Long id, String name, String description, DepartmentModel department) {
         this.id = id;
         this.name = name;
         this.description = description;
-        this.departmentId = departmentId;
+        this.department = department;
     }
 
     public CityModel() {
@@ -47,6 +48,14 @@ public class CityModel {
 
     public void setDepartmentId(Long departmentId) {
         this.departmentId = departmentId;
+    }
+
+    public DepartmentModel getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(DepartmentModel department) {
+        this.department = department;
     }
 
 

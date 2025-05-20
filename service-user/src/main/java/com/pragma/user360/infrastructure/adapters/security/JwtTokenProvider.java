@@ -1,11 +1,12 @@
 package com.pragma.user360.infrastructure.adapters.security;
 
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.pragma.user360.domain.model.UserModel;
 import com.pragma.user360.domain.ports.out.UserPersistencePort;
-import com.pragma.user360.infrastructure.adapters.persistence.UserPersistenceAdapter;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,17 +18,19 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtTokenProvider {
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
-    private static final int MIN_SECRET_LENGTH = 64;
+    private static final int RECOMMENDED_HS512_SECRET_LENGTH_BYTES = 64; // 512 bits
+
     private final UserPersistencePort userPersistencePort;
-    private final UserPersistenceAdapter userPersistenceAdapter;
 
     @Value("${app.jwt.secret}")
     private String jwtSecretString;
@@ -35,100 +38,115 @@ public class JwtTokenProvider {
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationInMs;
 
-    private SecretKey jwtSecretKey;
+    @Value("${app.jwt.issuer-uri:http://user-microservice}")
+    private String jwtIssuerUri;
 
-    public JwtTokenProvider(UserPersistencePort userPersistencePort, UserPersistenceAdapter userPersistenceAdapter) {
+    private MACSigner signer;
+    private MACVerifier verifier;
+
+    public JwtTokenProvider(UserPersistencePort userPersistencePort) {
         this.userPersistencePort = userPersistencePort;
-        this.userPersistenceAdapter = userPersistenceAdapter;
     }
 
     @PostConstruct
     public void init() {
         if (!StringUtils.hasText(jwtSecretString)) {
-            log.error("JWT Secret is missing! Please configure 'app.jwt.secret' in application.properties");
+            log.error("JWT Secret is missing! Please configure 'app.jwt.secret'");
             throw new IllegalStateException("JWT Secret is missing");
         }
 
         byte[] keyBytes = jwtSecretString.getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < MIN_SECRET_LENGTH) {
-            log.error("JWT Secret is too short! Must be at least {} bytes. Current length: {} bytes",
-                    MIN_SECRET_LENGTH, keyBytes.length);
-            throw new IllegalStateException("JWT Secret is too short");
+
+        if (keyBytes.length < RECOMMENDED_HS512_SECRET_LENGTH_BYTES) {
+            log.warn("JWT Secret ({} bytes) is shorter than the recommended {} bytes for HS512. Ensure this key is strong enough.",
+                    keyBytes.length, RECOMMENDED_HS512_SECRET_LENGTH_BYTES);
         }
 
         try {
-            this.jwtSecretKey = Keys.hmacShaKeyFor(keyBytes);
-            log.info("JWT Secret key initialized successfully");
-        } catch (Exception e) {
-            log.error("Error initializing JWT Secret key: {}", e.getMessage());
-            throw new IllegalStateException("Error initializing JWT Secret key", e);
+            SecretKey sharedSecretKey = new SecretKeySpec(keyBytes, "HmacSHA512");
+            this.signer = new MACSigner(sharedSecretKey);
+            this.verifier = new MACVerifier(sharedSecretKey);
+            log.info("JWT components (Signer/Verifier) initialized successfully for HmacSHA512.");
+            log.info("JWT Issuer URI: {}", jwtIssuerUri);
+        } catch (JOSEException e) {
+            log.error("Error initializing JWT Signer/Verifier for HmacSHA512: {}", e.getMessage());
+            throw new IllegalStateException("Error initializing JWT Signer/Verifier for HmacSHA512", e);
         }
     }
 
     public String generateToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
-        UserModel userModel = userPersistenceAdapter.getUserByEmail(userPrincipal.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserModel userModel = userPersistencePort.getUserByEmail(userPrincipal.getUsername())
+                .orElseThrow(() -> {
+                    log.error("User not found with email: {}", userPrincipal.getUsername());
+                    return new IllegalArgumentException("User not found with email: " + userPrincipal.getUsername());
+                });
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .toList();
+                .collect(Collectors.toList()); // Usar collect para mutabilidad si es necesario, o List.copyOf para inmutabilidad
 
-        log.debug("Generating token for user: {}, roles: {}", userPrincipal.getUsername(), roles);
+        log.debug("Generating HS512 token for user: {}, roles: {}", userPrincipal.getUsername(), roles);
 
-        return Jwts.builder()
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                 .subject(userModel.getId().toString())
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .claim("role", roles.get(0))
-                .signWith(jwtSecretKey)
-                .compact();
+                .issuer(jwtIssuerUri)
+                .issueTime(now)
+                .expirationTime(expiryDate)
+                .claim("role", roles.isEmpty() ? null : roles.get(0)) // Tomar el primer rol
+                .claim("email", userModel.getEmail())
+                .build();
+
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
+
+        try {
+            signedJWT.sign(this.signer);
+        } catch (JOSEException e) {
+            log.error("Error signing JWT: {}", e.getMessage(), e);
+            throw new RuntimeException("Error signing JWT", e);
+        }
+
+        return signedJWT.serialize();
     }
 
-    public String getUsernameFromJWT(String token) {
+    public String getUsernameFromJWT(String token) { // Devuelve el email
         if (!StringUtils.hasText(token)) {
             throw new IllegalArgumentException("JWT token cannot be null or empty");
         }
-
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(jwtSecretKey)
-                    .build()
-                    .parseSignedClaims(token.trim())
-                    .getPayload();
-            String userId = claims.getSubject();
+            SignedJWT signedJWT = SignedJWT.parse(token.trim());
+            if (!signedJWT.verify(this.verifier)) {
+                throw new JOSEException("JWT signature verification failed!");
+            }
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
-            // Fetch the user by ID
-            UserModel userModel = userPersistenceAdapter.getUserById(Long.valueOf(userId))
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            String email = claimsSet.getStringClaim("email");
+            if (email != null) {
+                return email;
+            }
+
+            // Fallback si el email no está como claim (aunque debería estarlo)
+            String userId = claimsSet.getSubject();
+            if (userId == null) {
+                log.error("Subject (user ID) not found in JWT");
+                throw new JOSEException("Subject (user ID) not found in JWT");
+            }
+            UserModel userModel = userPersistencePort.getUserById(Long.valueOf(userId))
+                    .orElseThrow(() -> {
+                        log.error("User not found with ID: {}", userId);
+                        return new JOSEException("User not found with ID: " + userId);
+                    });
             return userModel.getEmail();
 
-
-        } catch (Exception e) {
-            log.error("Error extracting username from JWT token: {}", e.getMessage());
-            throw new JwtException("Error extracting username from JWT token", e);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<String> getRolesFromJWT(String token) {
-        if (!StringUtils.hasText(token)) {
-            throw new IllegalArgumentException("JWT token cannot be null or empty");
-        }
-
-        try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(jwtSecretKey)
-                    .build()
-                    .parseSignedClaims(token.trim())
-                    .getPayload();
-            return claims.get("roles", List.class);
-        } catch (Exception e) {
-            log.error("Error extracting roles from JWT token: {}", e.getMessage());
-            throw new JwtException("Error extracting roles from JWT token", e);
+        } catch (ParseException e) {
+            log.error("Invalid JWT token (malformed): {}", e.getMessage());
+            throw new RuntimeException("Invalid JWT token (malformed)", e);
+        } catch (JOSEException e) {
+            log.error("Error processing JWT (expected HS512): {}", e.getMessage());
+            throw new RuntimeException("Error processing JWT (expected HS512)", e);
         }
     }
 
@@ -137,25 +155,43 @@ public class JwtTokenProvider {
             log.warn("Token validation failed: token is null or empty");
             return false;
         }
-
         try {
-            Jwts.parser()
-                    .verifyWith(jwtSecretKey)
-                    .build()
-                    .parseSignedClaims(token.trim());
+            SignedJWT signedJWT = SignedJWT.parse(token.trim());
+
+            // 1. Verificar la firma
+            if (!signedJWT.verify(this.verifier)) {
+                log.error("Invalid JWT signature (expected HS512)");
+                return false;
+            }
+
+            // 2. Verificar claims (expiración, issuer)
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+            Date now = new Date();
+
+            // Verificar expiración
+            Date expirationTime = claimsSet.getExpirationTime();
+            if (expirationTime == null || expirationTime.before(now)) {
+                log.error("Expired JWT token");
+                return false;
+            }
+
+            // Verificar issuer
+            String issuer = claimsSet.getIssuer();
+            if (!jwtIssuerUri.equals(issuer)) {
+                log.error("Invalid JWT issuer. Expected: {}, Actual: {}", jwtIssuerUri, issuer);
+                return false;
+            }
+
+            // Puedes añadir más validaciones de claims aquí si es necesario (nbf, aud, etc.)
+
             return true;
-        } catch (SignatureException ex) {
-            log.error("Invalid JWT signature: {}", ex.getMessage());
-        } catch (MalformedJwtException ex) {
-            log.error("Invalid JWT token: {}", ex.getMessage());
-        } catch (ExpiredJwtException ex) {
-            log.error("Expired JWT token: {}", ex.getMessage());
-        } catch (UnsupportedJwtException ex) {
-            log.error("Unsupported JWT token: {}", ex.getMessage());
-        } catch (IllegalArgumentException ex) {
-            log.error("JWT claims string is empty: {}", ex.getMessage());
-        } catch (Exception ex) {
-            log.error("Unexpected error validating JWT token: {}", ex.getMessage());
+        } catch (ParseException e) {
+            log.error("Invalid JWT token (malformed): {}", e.getMessage());
+        } catch (JOSEException e) {
+            // Esto podría ocurrir si la clave es incorrecta para el algoritmo, etc.
+            log.error("JOSE error during JWT validation (e.g., signature verification failed): {}", e.getMessage());
+        } catch (Exception ex) { // Captura genérica para otros errores inesperados
+            log.error("Unexpected error validating JWT token (expected HS512): {}", ex.getMessage(), ex);
         }
         return false;
     }

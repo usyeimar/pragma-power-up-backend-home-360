@@ -2,15 +2,14 @@ package com.pragma.home360.home.infrastructure.endpoints.rest;
 
 
 import com.pragma.home360.home.application.dto.request.SavePropertyRequest;
+import com.pragma.home360.home.application.dto.request.filters.PropertyFilterRequest;
 import com.pragma.home360.home.application.dto.response.PropertyResponse;
 import com.pragma.home360.home.application.services.PropertyService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -25,6 +24,11 @@ public class PropertyController {
     @PostMapping
     public PropertyResponse createProperty(@RequestBody @Valid SavePropertyRequest request) {
         return propertyService.saveProperty(request);
+    }
+
+    @GetMapping
+    public List<PropertyResponse> getAllProperties(@ParameterObject @Valid PropertyFilterRequest propertyFilterRequest) {
+        return propertyService.getAllProperties(propertyFilterRequest);
     }
 
 }

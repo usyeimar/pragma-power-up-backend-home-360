@@ -11,13 +11,12 @@ public class PropertyModel {
     private Integer numberOfRooms;
     private Integer numberOfBathrooms;
     private Double price;
-    private Integer locationId;
-    private Integer categoryId;
+    private LocationModel location;
+    private CategoryModel category;
     private LocalDate activePublicationDate;
     private PropertyPublicationStatus publicationStatus;
 
     public PropertyModel() {
-        // Default constructor
     }
 
     public Long getId() {
@@ -44,12 +43,12 @@ public class PropertyModel {
         return price;
     }
 
-    public Integer getLocationId() {
-        return locationId;
+    public LocationModel getLocation() {
+        return location;
     }
 
-    public Integer getCategoryId() {
-        return categoryId;
+    public CategoryModel getCategory() {
+        return category;
     }
 
     public LocalDate getActivePublicationDate() {
@@ -85,12 +84,12 @@ public class PropertyModel {
         this.price = price;
     }
 
-    public void setLocationId(Integer locationId) {
-        this.locationId = locationId;
+    public void setLocation(LocationModel location) {
+        this.location = location;
     }
 
-    public void setCategoryId(Integer categoryId) {
-        this.categoryId = categoryId;
+    public void setCategory(CategoryModel category) {
+        this.category = category;
     }
 
     public void setActivePublicationDate(LocalDate activePublicationDate) {
@@ -110,8 +109,8 @@ public class PropertyModel {
                 ", numberOfRooms=" + numberOfRooms +
                 ", numberOfBathrooms=" + numberOfBathrooms +
                 ", price=" + price +
-                ", locationId=" + locationId +
-                ", categoryId=" + categoryId +
+                ", location=" + location +
+                ", category=" + category +
                 ", activePublicationDate=" + activePublicationDate +
                 ", publicationStatus=" + publicationStatus +
                 '}';

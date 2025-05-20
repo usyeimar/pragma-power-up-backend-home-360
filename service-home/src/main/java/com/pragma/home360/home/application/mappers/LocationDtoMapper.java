@@ -19,23 +19,35 @@ public interface LocationDtoMapper {
             @Mapping(source = "latitude", target = "latitude"),
             @Mapping(source = "longitude", target = "longitude"),
             @Mapping(source = "referencePoint", target = "referencePoint"),
-            @Mapping(source = "neighborhoodId", target = "neighborhoodId"),
-            @Mapping(source = "cityId", target = "cityId"),
+            @Mapping(source = "neighborhoodId", target = "neighborhood.id"),
+            @Mapping(source = "cityId", target = "city.id"),
     })
     LocationModel toModel(SaveLocationRequest request);
 
     @Mappings({
-            @Mapping(source = "id", target = "id"),
             @Mapping(source = "address", target = "address"),
             @Mapping(source = "latitude", target = "latitude"),
             @Mapping(source = "longitude", target = "longitude"),
             @Mapping(source = "referencePoint", target = "referencePoint"),
-            @Mapping(source = "neighborhoodId", target = "neighborhoodId"),
-            @Mapping(source = "cityId", target = "cityId"),
+
+            @Mapping(source = "neighborhood.id", target = "neighborhood.id"),
+            @Mapping(source = "neighborhood.name", target = "neighborhood.name"),
+            @Mapping(source = "neighborhood.description", target = "neighborhood.description"),
+
+            @Mapping(source = "neighborhood.city.department.id", target = "neighborhood.city.department.id"),
+            @Mapping(source = "neighborhood.city.department.name", target = "neighborhood.city.department.name"),
+            @Mapping(source = "neighborhood.city.department.description", target = "neighborhood.city.department.description"),
+
+            @Mapping(source = "neighborhood.city.id", target = "neighborhood.city.id"),
+            @Mapping(source = "neighborhood.city.name", target = "neighborhood.city.name"),
+            @Mapping(source = "neighborhood.city.description", target = "neighborhood.city.description"),
+
+            @Mapping(source = "city.id", target = "city.id"),
+            @Mapping(source = "city.name", target = "city.name"),
+            @Mapping(source = "city.description", target = "city.description"),
     })
     LocationResponse toResponse(LocationModel model);
 
-    List<LocationResponse> toResponseList(List<LocationModel> models);
 
     @Mappings({
             @Mapping(source = "id", target = "id"),
@@ -43,11 +55,18 @@ public interface LocationDtoMapper {
             @Mapping(source = "latitude", target = "latitude"),
             @Mapping(source = "longitude", target = "longitude"),
             @Mapping(source = "referencePoint", target = "referencePoint"),
-            @Mapping(source = "neighborhoodName", target = "neighborhoodName"),
-            @Mapping(source = "cityName", target = "cityName"),
-            @Mapping(source = "departmentName", target = "departmentName"),
-    })
-    LocationSearchResponse modelToSearchResponse(LocationModel model);
 
-    List<LocationSearchResponse> modelListToSearchResponseList(List<LocationModel> models);
+            @Mapping(source = "neighborhood.id", target = "neighborhood.id"),
+            @Mapping(source = "neighborhood.name", target = "neighborhood.name"),
+            @Mapping(source = "neighborhood.description", target = "neighborhood.description"),
+            @Mapping(source = "neighborhood.city.department.id", target = "neighborhood.city.department.id"),
+            @Mapping(source = "neighborhood.city.department.name", target = "neighborhood.city.department.name"),
+            @Mapping(source = "neighborhood.city.department.description", target = "neighborhood.city.department.description"),
+
+            @Mapping(source = "city.id", target = "city.id"),
+            @Mapping(source = "city.name", target = "city.name"),
+            @Mapping(source = "city.description", target = "city.description")
+    })
+    LocationSearchResponse toSearchResponse(LocationModel model);
+
 }

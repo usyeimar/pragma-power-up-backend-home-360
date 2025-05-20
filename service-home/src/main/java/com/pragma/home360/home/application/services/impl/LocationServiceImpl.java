@@ -49,17 +49,9 @@ public class LocationServiceImpl implements LocationService {
 
         List<LocationSearchResponse> locations = resultPage
                 .content().stream()
-                .map(items -> new LocationSearchResponse(
-                        items.getId(),
-                        items.getAddress(),
-                        items.getLatitude(),
-                        items.getLongitude(),
-                        items.getReferencePoint(),
-                        items.getNeighborhoodName(),
-                        items.getCityName(),
-                        items.getDepartmentName()
-                ))
+                .map(locationDtoMapper::toSearchResponse)
                 .collect(Collectors.toList());
+
 
         return new PaginatedResponse<>(locations, resultPage.page(), resultPage.size(), resultPage.totalPages(), resultPage.totalElements());
     }

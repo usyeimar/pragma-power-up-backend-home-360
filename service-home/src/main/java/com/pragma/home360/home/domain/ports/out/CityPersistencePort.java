@@ -15,7 +15,7 @@ public interface CityPersistencePort {
 
     Optional<CityModel> getCityByName(String name);
 
-    List<CityModel> getAllCities(int page, int size);
+    PagedResult<CityModel> getAllCities(int page, int size);
 
     long getCityCount();
 

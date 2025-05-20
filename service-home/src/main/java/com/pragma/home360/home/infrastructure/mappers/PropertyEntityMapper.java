@@ -20,12 +20,6 @@ public interface PropertyEntityMapper {
     PropertyEntity toEntity(PropertyModel propertyModel);
 
 
-//    @Mapping(source = "city.id", target = "cityId")
-//    NeighborhoodModel toModel(NeighborHoodEntity entity);
-//
-//    @Mapping(source = "cityId", target = "city.id")
-//    @Mapping(target = "locations", ignore = true)
-//    NeighborHoodEntity toEntity(NeighborhoodModel model);
 
 
 }

@@ -5,23 +5,27 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.util.*;
-
+import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 @Component
 @Order(1)
 public class ClaimsToHeadersFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(ClaimsToHeadersFilter.class);
+
+    private static final String HEADER_USER_ID = "X-User-Id";
+    private static final String HEADER_USER_ROLES = "X-User-Roles";
+    private static final String CLAIM_ROLE = "role";
 
 
     public ClaimsToHeadersFilter() {
@@ -34,45 +38,28 @@ public class ClaimsToHeadersFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof Jwt) {
-            Jwt jwtPrincipal = (Jwt) authentication.getPrincipal();
+        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof Jwt jwtPrincipal) {
             CustomHttpServletRequestWrapper requestWrapper = new CustomHttpServletRequestWrapper(httpRequest);
 
-            // Extrae el User ID del 'subject' del token
             String userId = jwtPrincipal.getSubject();
-            if (userId != null) {
-                log.debug("API Gateway: Añadiendo cabecera X-User-Id: {}", userId);
-                requestWrapper.putHeader("X-User-Id", userId);
+            if (StringUtils.hasText(userId)) {
+                log.debug("API Gateway: Adding header {}: {}", HEADER_USER_ID, userId);
+                requestWrapper.putHeader(HEADER_USER_ID, userId);
             }
 
-            // Extrae el rol del claim 'role'. Asume que es un solo string.
-            // Tu JwtTokenProvider en service-user parece añadirlo como: .claim("role", roles.get(0))
-            String role = jwtPrincipal.getClaimAsString("role");
-            if (role != null && !role.isEmpty()) {
-                log.debug("API Gateway: Añadiendo cabecera X-User-Roles: {}", role);
-                requestWrapper.putHeader("X-User-Roles", role);
+            String role = jwtPrincipal.getClaimAsString(CLAIM_ROLE);
+            if (StringUtils.hasText(role)) {
+                log.debug("API Gateway: Adding header {}: {}", HEADER_USER_ROLES, role);
+                requestWrapper.putHeader(HEADER_USER_ROLES, role);
             }
 
-            // Opcional: Extraer el email si lo incluyes en los claims del JWT
-            // String email = jwtPrincipal.getClaimAsString("email"); // Asegúrate de que el claim se llame "email"
-            // if (email != null && !email.isEmpty()) {
-            //     log.debug("API Gateway: Añadiendo cabecera X-User-Email: {}", email);
-            //     requestWrapper.putHeader("X-User-Email", email);
-            // }
-
-            log.trace("API Gateway: Reenviando solicitud con cabeceras de usuario añadidas.");
-            chain.doFilter(requestWrapper, response); // Continúa con la solicitud modificada
+            chain.doFilter(requestWrapper, response);
         } else {
-            // Si no hay un principal Jwt (ej. ruta pública, o fallo de autenticación previo)
-            log.trace("API Gateway: No hay Jwt principal en SecurityContext para la ruta: {}. Se procede sin añadir cabeceras de usuario.", httpRequest.getRequestURI());
-            chain.doFilter(request, response); // Continúa con la solicitud original
+            log.trace("API Gateway: No Jwt principal in SecurityContext for path: {}. Proceeding without adding user headers.", httpRequest.getRequestURI());
+            chain.doFilter(request, response);
         }
     }
 
-    /**
-     * Clase interna Wrapper para poder modificar las cabeceras de la HttpServletRequest.
-     * HttpServletRequest es inmutable por defecto.
-     */
     private static class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
         private final Map<String, String> customHeaders;
 
@@ -82,55 +69,60 @@ public class ClaimsToHeadersFilter implements Filter {
         }
 
         public void putHeader(String name, String value) {
-            this.customHeaders.put(name, value);
+            this.customHeaders.put(name.toLowerCase(), value);
         }
 
         @Override
         public String getHeader(String name) {
-            String headerValue = customHeaders.get(name);
-            if (headerValue != null) {
-                return headerValue;
-            }
-            return super.getHeader(name);
+            String customHeaderValue = customHeaders.get(name.toLowerCase());
+            return customHeaderValue != null ? customHeaderValue : super.getHeader(name);
         }
 
         @Override
         public Enumeration<String> getHeaderNames() {
-            Set<String> set = new HashSet<>(customHeaders.keySet());
-            Enumeration<String> e = super.getHeaderNames();
-            while (e.hasMoreElements()) {
-                set.add(e.nextElement());
+            Set<String> headerNames = new HashSet<>(customHeaders.keySet());
+            Enumeration<String> originalHeaderNames = super.getHeaderNames();
+            while (originalHeaderNames.hasMoreElements()) {
+                headerNames.add(originalHeaderNames.nextElement());
             }
-            return Collections.enumeration(set);
+            return Collections.enumeration(headerNames);
         }
 
         @Override
         public Enumeration<String> getHeaders(String name) {
+            String customHeaderValue = customHeaders.get(name.toLowerCase());
             List<String> values = new ArrayList<>();
-            if (customHeaders.containsKey(name)) {
-                values.add(customHeaders.get(name));
-            }
-            Enumeration<String> underlyingHeaders = super.getHeaders(name);
-            if (underlyingHeaders != null) {
-                while (underlyingHeaders.hasMoreElements()) {
-                    values.add(underlyingHeaders.nextElement());
+
+            if (customHeaderValue != null) {
+                values.add(customHeaderValue);
+            } else {
+                // If not overridden, delegate to the original request to get all headers for the name
+                Enumeration<String> originalHeaders = super.getHeaders(name);
+                if (originalHeaders != null) {
+                    values.addAll(Collections.list(originalHeaders));
                 }
             }
-            if (values.isEmpty()) {
-                return Collections.emptyEnumeration();
+
+            if (values.isEmpty() && customHeaderValue == null && !Collections.list(super.getHeaderNames()).contains(name.toLowerCase())) {
+                // If the header is not in customHeaders and not in original headers, it doesn't exist.
+                // However, if customHeaderValue is null but the header *could* exist in super,
+                // an empty enumeration is correct if super.getHeaders(name) returns an empty one.
+                // This check ensures we don't return an enumeration for a completely non-existent header
+                // unless it was explicitly set to null/empty in customHeaders (which putHeader doesn't allow for null values).
             }
+
+
             return Collections.enumeration(values);
         }
     }
 
-    // Métodos init() y destroy() de la interfaz Filter (pueden dejarse vacíos si no se necesitan)
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        log.info("ClaimsToHeadersFilter inicializado.");
+        log.info("ClaimsToHeadersFilter initialized.");
     }
 
     @Override
     public void destroy() {
-        log.info("ClaimsToHeadersFilter destruido.");
+        log.info("ClaimsToHeadersFilter destroyed.");
     }
 }

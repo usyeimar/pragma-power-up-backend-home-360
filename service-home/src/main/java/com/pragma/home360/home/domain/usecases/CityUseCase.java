@@ -5,6 +5,7 @@ import com.pragma.home360.home.domain.model.CityModel;
 import com.pragma.home360.home.domain.ports.in.CityServicePort;
 import com.pragma.home360.home.domain.ports.out.CityPersistencePort;
 import com.pragma.home360.home.domain.ports.out.DepartmentPersistencePort;
+import com.pragma.home360.home.domain.utils.pagination.PagedResult;
 
 import java.util.List;
 import java.util.Objects;
@@ -61,7 +62,7 @@ public class CityUseCase implements CityServicePort {
     }
 
     @Override
-    public List<CityModel> getAllCities(int page, int size) {
+    public PagedResult<CityModel> getAllCities(int page, int size) {
         DepartmentUseCase.validateFilters(page, size);
         return cityPersistencePort.getAllCities(page, size);
     }

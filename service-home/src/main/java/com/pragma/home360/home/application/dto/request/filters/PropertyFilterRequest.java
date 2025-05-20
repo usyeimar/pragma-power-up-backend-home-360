@@ -2,7 +2,7 @@ package com.pragma.home360.home.application.dto.request.filters;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-public record PropertyFilterModel(
+public record PropertyFilterRequest(
         @Schema(description = "Número de página (empieza desde 0)", example = "0", defaultValue = "0")
         Integer page,
         @Schema(description = "Cantidad de elementos por página", example = "20", defaultValue = "10")
