@@ -10,6 +10,8 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
       SERVER_PORT: ${SERVER_PORT_API_GATEWAY}
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      APP_JWT_ISSUER_URI: ${APP_JWT_ISSUER_URI}
     depends_on:
       service-discovery:
         condition: service_started
@@ -35,42 +37,47 @@ services:
     networks:
       - microservices-net
 
-  postgres-db:
-    image: pgvector/pgvector:pg17
-    container_name: postgres-db
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
-      - postgres-db-data:/var/lib/postgresql/data
+      - mysql-db-data:/var/lib/mysql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     ports:
-      - "${POSTGRES_DB_PORT}:${POSTGRES_DB_PORT}"
+      - "${MYSQL_DB_PORT}:3306"
     networks:
       - microservices-net
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
-  pgadmin:
-    image: dpage/pgadmin4:9.3
-    container_name: pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-      PGADMIN_LISTEN_PORT: 80
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
     ports:
-      - "${PGADMIN_PORT}:80"
-    volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - "${PHPMYADMIN_PORT}:80" # Mapea el puerto 80 del contenedor al puerto que elijas en el host
+    environment:
+      PMA_HOST: mysql-db # Nombre del servicio del contenedor MySQL
+      PMA_PORT: 3306 # Puerto interno de MySQL
+      PMA_USER: ${MYSQL_USER} # Opcional: usuario por defecto para login
+      PMA_PASSWORD: ${MYSQL_PASSWORD} # Opcional: contraseña por defecto para login
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # Necesario si quieres iniciar sesión como root
+      # PMA_ARBITRARY: 1 # Descomenta esto si quieres poder conectarte a cualquier servidor desde la UI de phpMyAdmin
     networks:
       - microservices-net
     depends_on:
-      postgres-db:
+      mysql-db:
         condition: service_healthy
     restart: unless-stopped
+
 
   service-user:
     build:
@@ -78,9 +85,10 @@ services:
     container_name: service-user
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
-      SPRING_DATASOURCE_URL: ${DB_USER_SERVICE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_URL: ${DB_USER_SERVICE_URL_MYSQL} # Tomado de .env
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${MYSQL_DRIVER_CLASS_NAME}
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
       SERVER_PORT: ${SERVER_PORT_SERVICE_USER}
       APP_JWT_SECRET: ${APP_JWT_SECRET}
@@ -95,7 +103,7 @@ services:
     depends_on:
       service-discovery:
         condition: service_started
-      postgres-db:
+      mysql-db:
         condition: service_healthy
     networks:
       - microservices-net
@@ -106,15 +114,16 @@ services:
     container_name: service-home
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
-      SPRING_DATASOURCE_URL: ${DB_HOME_SERVICE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_URL: ${DB_HOME_SERVICE_URL_MYSQL} # Tomado de .env
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${MYSQL_DRIVER_CLASS_NAME}
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
       SERVER_PORT: ${SERVER_PORT_SERVICE_HOME}
     depends_on:
       service-discovery:
         condition: service_started
-      postgres-db:
+      mysql-db:
         condition: service_healthy
     networks:
       - microservices-net
@@ -127,15 +136,16 @@ services:
     container_name: service-visits
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
-      SPRING_DATASOURCE_URL: ${DB_VISITS_SERVICE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_URL: ${DB_VISITS_SERVICE_URL_MYSQL} # Tomado de .env
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${MYSQL_DRIVER_CLASS_NAME}
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
       SERVER_PORT: ${SERVER_PORT_SERVICE_VISITS}
     depends_on:
       service-discovery:
         condition: service_started
-      postgres-db:
+      mysql-db:
         condition: service_healthy
     networks:
       - microservices-net
@@ -146,22 +156,23 @@ services:
     container_name: service-transactions
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
-      SPRING_DATASOURCE_URL: ${DB_TRANSACTIONS_SERVICE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_URL: ${DB_TRANSACTIONS_SERVICE_URL_MYSQL} # Tomado de .env
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${MYSQL_DRIVER_CLASS_NAME}
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
       SERVER_PORT: ${SERVER_PORT_SERVICE_TRANSACTIONS}
     depends_on:
       service-discovery:
         condition: service_started
-      postgres-db:
+      mysql-db:
         condition: service_healthy
     networks:
       - microservices-net
 
 volumes:
-  postgres-db-data:
-  pgadmin-data:
+  mysql-db-data:
+  bytebase-data:
 
 networks:
   microservices-net:

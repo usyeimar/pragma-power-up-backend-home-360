@@ -1,14 +1,11 @@
-SELECT 'CREATE DATABASE services_user'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'services_user')\gexec
+CREATE DATABASE IF NOT EXISTS services_user CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS services_home CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS services_visits CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS services_transactions CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Crear la base de datos para service-home si no existe
-SELECT 'CREATE DATABASE services_home'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'services_home')\gexec
 
--- Crear la base de datos para service-visits si no existe
-SELECT 'CREATE DATABASE services_visits'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'services_visits')\gexec
-
--- Crear la base de datos para service-transactions si no existe
-SELECT 'CREATE DATABASE services_transactions'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'services_transactions')\gexec
+GRANT ALL PRIVILEGES ON `services_user`.* TO '365home_app'@'%';
+GRANT ALL PRIVILEGES ON `services_home`.* TO '365home_app'@'%';
+GRANT ALL PRIVILEGES ON `services_visits`.* TO '365home_app'@'%';
+GRANT ALL PRIVILEGES ON `services_transactions`.* TO '365home_app'@'%';
+FLUSH PRIVILEGES;
