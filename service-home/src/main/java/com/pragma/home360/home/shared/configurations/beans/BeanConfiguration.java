@@ -11,7 +11,6 @@ import com.pragma.home360.home.infrastructure.adapters.persistence.*;
 import com.pragma.home360.home.infrastructure.mappers.*;
 import com.pragma.home360.home.infrastructure.repositories.mysql.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -141,5 +140,29 @@ public class BeanConfiguration {
                 locationPersistencePort,
                 categoryPersistencePort
         );
+    }
+
+
+    @Bean
+    public PropertyImagePersistencePort propertyImagePersistencePort(
+            PropertyImageRepository propertyImageRepository,
+            PropertyRepository propRepository,
+            PropertyImageEntityMapper propertyImageEntityMapper) {
+        return new PropertyImagePersistenceAdapter(propertyImageRepository, propRepository, propertyImageEntityMapper);
+    }
+
+    @Bean
+    public PropertyImageServicePort propertyImageServicePort(
+            PropertyImagePersistencePort propertyImagePersistencePort,
+            PropertyPersistencePort propertyPersistencePort,
+            FileStorageService fileStorageService) {
+        return new PropertyImageUseCase(propertyImagePersistencePort, propertyPersistencePort, fileStorageService);
+    }
+
+    @Bean
+    public PropertyImageService propertyImageService(
+            PropertyImageServicePort propertyImageServicePort,
+            PropertyImageDtoMapper propertyImageDtoMapper) {
+        return new PropertyImageServiceImpl(propertyImageServicePort, propertyImageDtoMapper);
     }
 }

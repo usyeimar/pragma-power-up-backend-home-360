@@ -13,4 +13,5 @@ public interface CategoryPersistencePort {
 
     PagedResult<CategoryModel> getCategories(CategoryFilterModel categoryFilterModel);
 
+    Optional<CategoryModel> getCategoryById(Long id);
 }

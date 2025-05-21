@@ -26,12 +26,8 @@ public record SavePropertyRequest(
         @DecimalMin(value = "0.0", inclusive = false, message = "El precio debe ser mayor que cero.")
         BigDecimal price,
 
-        @NotNull(message = "La fecha de publicación activa es obligatoria.")
         @FutureOrPresent(message = "La fecha de publicación activa debe ser hoy o una fecha futura.")
         LocalDate activePublicationDate,
-
-        @NotNull(message = "El estado de la publicación es obligatorio.")
-        PropertyPublicationStatus publicationStatus,
 
 
         @NotNull(message = "El ID de la categoría es obligatorio.")
