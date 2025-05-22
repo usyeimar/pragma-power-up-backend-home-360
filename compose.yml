@@ -1,10 +1,10 @@
 version: '3.8'
 
 services:
-  api-gateway:
+  service-gateway:
     build:
-      context: ./api-gateway
-    container_name: api-gateway
+      context: ./service-gateway
+    container_name: service-gateway
     ports:
       - "${SERVER_PORT_API_GATEWAY}:${SERVER_PORT_API_GATEWAY}"
     environment:

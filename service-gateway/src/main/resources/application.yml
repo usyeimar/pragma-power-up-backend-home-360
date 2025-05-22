@@ -1,0 +1,108 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+
+      mvc:
+        routes:
+          - id: user-microservice-api-docs
+            uri: lb://user-microservice
+            predicates:
+              - Path=/v3/api-docs/user-microservice
+            filters:
+              - RewritePath=/v3/api-docs/user-microservice, /v3/api-docs
+
+          - id: home-microservice-api-docs
+            uri: lb://home-microservice
+            predicates:
+              - Path=/v3/api-docs/home-microservice
+            filters:
+              - RewritePath=/v3/api-docs/home-microservice, /v3/api-docs
+
+          - id: service-visits-api-docs
+            uri: lb://service-visits
+            predicates:
+              - Path=/v3/api-docs/service-visits
+            filters:
+              - RewritePath=/v3/api-docs/service-visits, /v3/api-docs
+
+          - id: service-transactions-api-docs
+            uri: lb://service-transactions
+            predicates:
+              - Path=/v3/api-docs/service-transactions
+            filters:
+              - RewritePath=/v3/api-docs/service-transactions, /v3/api-docs
+
+
+
+          - id: service-user-route
+            uri: lb://user-microservice
+            predicates:
+              - Path=/api/v1/users/**, /api/v1/auth/**
+
+
+          - id: service-home-route
+            uri: lb://home-microservice
+            predicates:
+              - Path=/api/v1/categories/**, /api/v1/cities/**, /api/v1/departments/**, /api/v1/locations/**, /api/v1/neighborhoods/**, /api/v1/properties/**
+
+
+          - id: service-visits-route
+            uri: lb://service-visits
+            predicates:
+              - Path=/api/v1/visits/**
+
+
+          - id: service-transactions-route
+            uri: lb://service-transactions
+            predicates:
+              - Path=/api/v1/transactions/**
+
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${APP_JWT_ISSUER_URI:http://user-microservice}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.uuid}}
+    prefer-ip-address: true
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    com.pragma.gateway360.config: DEBUG
+    com.nimbusds.jose: DEBUG
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+    expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
+    prefix: ${APP_JWT_PREFIX:Bearer }
+    header-string: ${APP_JWT_HEADER_STRING:Authorization}
+
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: User
+        url: /v3/api-docs/user-microservice
+      - name: Home
+        url: /v3/api-docs/home-microservice
+      - name: Visits
+        url: /v3/api-docs/service-visits
+      - name: Transactions
+        url: /v3/api-docs/service-transactions
