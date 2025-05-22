@@ -2,7 +2,8 @@
 
 ## Resumen 📜
 
-Home360 es una plataforma inmobiliaria digital construida sobre una **arquitectura de microservicios**. El sistema prioriza la modularidad, escalabilidad y mantenibilidad. La orquestación en desarrollo se gestiona con **Docker y Docker Compose**.
+Home360 es una plataforma inmobiliaria digital construida sobre una **arquitectura de microservicios**. El sistema prioriza la modularidad, escalabilidad y mantenibilidad. 
+La orquestación en desarrollo se gestiona con **Docker y Docker Compose**.
 
 ## Componentes Centrales de la Arquitectura 🏗️
 
