@@ -7,6 +7,7 @@ import com.pragma.home360.home.application.dto.request.SaveCityRequest;
 import com.pragma.home360.home.application.dto.response.CityResponse;
 import com.pragma.home360.home.application.mappers.CityDtoMapper;
 import com.pragma.home360.home.application.services.CityService;
+import com.pragma.home360.home.domain.exceptions.ModelNotFoundException;
 import com.pragma.home360.home.domain.model.CityModel;
 import com.pragma.home360.home.domain.ports.in.CityServicePort;
 import com.pragma.home360.home.domain.utils.pagination.PagedResult;
@@ -56,9 +57,11 @@ public class CityServiceImpl implements CityService {
     @Override
     public CityResponse getCityById(Long id) {
         CityModel cityModel = cityServicePort.getCityById(id)
-                .isPresent()
-                ? cityServicePort.getCityById(id).get()
-                : null;
+                .orElse(null); // Use Optional to handle the case when the city is not found
+
+        if (cityModel == null) {
+            throw new ModelNotFoundException(String.format("City with id %d not found", id));
+        }
         return cityDtoMapper.modelToResponse(cityModel);
     }
 }

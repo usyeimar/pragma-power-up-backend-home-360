@@ -1,13 +1,14 @@
-package com.pragma.home360.home.domain.usecases;
+package com.pragma.home360.home.unit.domain.usecases;
 
 import com.pragma.home360.home.domain.exceptions.ValidationException;
 import com.pragma.home360.home.domain.model.LocationModel;
 import com.pragma.home360.home.domain.ports.out.CityPersistencePort;
 import com.pragma.home360.home.domain.ports.out.LocationPersistencePort;
 import com.pragma.home360.home.domain.ports.out.NeighborhoodPersistencePort;
+import com.pragma.home360.home.domain.usecases.LocationUseCase;
 import com.pragma.home360.home.domain.utils.constants.DomainConstants;
 import com.pragma.home360.home.domain.utils.pagination.PagedResult;
-import com.pragma.home360.home.mocks.LocationMock;
+import com.pragma.home360.home.unit.mocks.LocationMock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

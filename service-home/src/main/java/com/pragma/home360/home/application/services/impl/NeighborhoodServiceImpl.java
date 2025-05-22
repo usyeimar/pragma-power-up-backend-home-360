@@ -51,9 +51,8 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
 
         NeighborhoodResponse baseResponse = neighborhoodDtoMapper.toResponse(neighborhoodModel);
 
-        String cityName = cityServicePort.getCityById(neighborhoodModel.getCity().getId())
-                .map(CityModel::getName)
-                .orElse(null);
+        cityServicePort.getCityById(baseResponse.city().id())
+                .orElseThrow(() -> new ModelNotFoundException(String.format(NEIGHBORHOOD_NOT_FOUND, id)));
 
         return new NeighborhoodResponse(
                 baseResponse.id(),

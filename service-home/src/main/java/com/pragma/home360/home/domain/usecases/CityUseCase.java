@@ -49,7 +49,7 @@ public class CityUseCase implements CityServicePort {
                         .getDepartmentById(departmentId)
                         .isPresent(),
                 city.getDepartmentId(),
-                DEPARTMENT_NOT_FOUND,
+                String.format(DEPARTMENT_NOT_FOUND, city.getDepartmentId()),
                 ModelNotFoundException.class.getName()
         );
 
@@ -58,7 +58,12 @@ public class CityUseCase implements CityServicePort {
 
     @Override
     public Optional<CityModel> getCityById(Long id) {
-        return cityPersistencePort.getCityById(id);
+        return cityPersistencePort.getCityById(id)
+                .or(() -> {
+                    throw new ModelNotFoundException(
+                            String.format(CITY_NOT_FOUND, id)
+                    );
+                });
     }
 
     @Override

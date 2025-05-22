@@ -2,6 +2,8 @@ package com.pragma.home360.home.domain.utils.constants;
 
 import com.pragma.home360.home.domain.exceptions.ValidationException;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.function.Predicate;
 
 /**
@@ -33,40 +35,6 @@ public class Validator {
     Validator() {
     }
 
-    /**
-     * Lanza una {@link ValidationException} si la condición proporcionada es falsa.
-     *
-     * @param condition    Condición booleana a validar.
-     * @param errorMessage Mensaje de error si la condición no se cumple.
-     * @throws ValidationException si la condición es falsa.
-     */
-    public static void validate(boolean condition, String errorMessage, String targetExceptionClass) {
-        if (!condition) {
-            if (targetExceptionClass != null) {
-                try {
-                    Class<?> exceptionClass = Class.forName(targetExceptionClass);
-
-                    if (!RuntimeException.class.isAssignableFrom(exceptionClass)) {
-                        throw new IllegalArgumentException("La clase proporcionada no extiende RuntimeException.");
-                    }
-
-                    throw (RuntimeException)
-                            exceptionClass.getConstructor(String.class).newInstance(errorMessage);
-
-                } catch (Exception e) {
-                    throw new IllegalArgumentException(
-                            "Error al instanciar la excepción personalizada: "
-                                    + targetExceptionClass +
-                                    e.getMessage()
-
-                    );
-                }
-            }
-
-            // Si no se proporciona clase personalizada, lanza excepción por defecto
-            throw new ValidationException(errorMessage);
-        }
-    }
 
     /**
      * Valida que un campo de texto no sea nulo ni esté vacío (luego de aplicar {@code trim()}).
@@ -91,26 +59,68 @@ public class Validator {
         validate(field.length() <= maxLength, String.format(errorMessage, maxLength), null);
     }
 
-    /**
-     * Ejecuta una validación personalizada mediante un {@link Predicate}.
-     *
-     * @param condition    Predicado que define la condición personalizada.
-     * @param value        Valor sobre el cual se aplica la validación.
-     * @param errorMessage Mensaje de error si la validación falla.
-     * @param <T>          Tipo del valor a validar.
-     */
-    public static <T> void validateCustom(Predicate<T> condition, T value, String errorMessage, String targetExceptionClass) {
-        if (value == null) {
-            try {
-                if (condition.test(null)) {
-                    return;
-                }
 
-            } catch (NullPointerException e) {
-                validate(false, errorMessage, targetExceptionClass);
-                return;
+    public static void validate(boolean condition, String errorMessage, String targetExceptionClass) {
+        if (!condition) {
+            if (targetExceptionClass != null) {
+                try {
+                    Class<?> exceptionClass = Class.forName(targetExceptionClass);
+                    if (!RuntimeException.class.isAssignableFrom(exceptionClass)) {
+                        throw new IllegalArgumentException("La clase de excepción personalizada '" + targetExceptionClass + "' no extiende RuntimeException.");
+                    }
+                    Constructor<?> constructor = exceptionClass.getConstructor(String.class);
+                    throw (RuntimeException) constructor.newInstance(errorMessage);
+
+                } catch (ClassNotFoundException e) {
+                    throw new IllegalArgumentException("Clase de excepción personalizada no encontrada: " + targetExceptionClass, e);
+                } catch (NoSuchMethodException e) {
+                    throw new IllegalArgumentException("Constructor (String) no encontrado para la clase de excepción personalizada: " + targetExceptionClass, e);
+                } catch (InstantiationException e) {
+                    throw new IllegalArgumentException("No se pudo instanciar la clase de excepción personalizada (puede ser abstracta o interfaz): " + targetExceptionClass, e);
+                } catch (IllegalAccessException e) {
+                    throw new IllegalArgumentException("Acceso ilegal al constructor de la clase de excepción personalizada: " + targetExceptionClass, e);
+                } catch (InvocationTargetException e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof RuntimeException) {
+                        throw (RuntimeException) cause;
+                    } else if (cause != null) {
+                        throw new RuntimeException("El constructor de la excepción personalizada '" + targetExceptionClass + "' lanzó una excepción chequeada: " + cause.getMessage(), cause);
+                    } else {
+                        throw new RuntimeException("InvocationTargetException sin causa al llamar al constructor de '" + targetExceptionClass + "'.", e);
+                    }
+                }
+            } else {
+                throw new ValidationException(errorMessage);
             }
         }
-        validate(condition.test(value), errorMessage, targetExceptionClass);
+    }
+
+    public static <T> void validateCustom(Predicate<T> condition, T value, String errorMessageTemplate, String targetExceptionClass) {
+        if (value == null) {
+            if (!condition.test(null)) {
+                String finalErrorMessage = errorMessageTemplate;
+                if (errorMessageTemplate != null && errorMessageTemplate.contains("%s")) {
+                    try {
+                        finalErrorMessage = String.format(errorMessageTemplate, (Object) null);
+                    } catch (java.util.IllegalFormatException ife) {
+                        // Silently ignore if formatting "null" fails for a non-%s template
+                    }
+                }
+                validate(false, finalErrorMessage, targetExceptionClass);
+            }
+            return;
+        }
+
+        if (!condition.test(value)) {
+            String finalErrorMessage = errorMessageTemplate;
+            if (errorMessageTemplate != null && (errorMessageTemplate.contains("%s") || errorMessageTemplate.contains("%d") || errorMessageTemplate.contains("%f") || errorMessageTemplate.contains("%b") || errorMessageTemplate.contains("%c") || errorMessageTemplate.contains("%t"))) {
+                try {
+                    finalErrorMessage = String.format(errorMessageTemplate, value);
+                } catch (java.util.IllegalFormatException ife) {
+                    System.err.println("ADVERTENCIA: Falló la formatación del mensaje de error. Plantilla: '" + errorMessageTemplate + "', Valor: '" + value + "'. Error: " + ife.getMessage());
+                }
+            }
+            validate(false, finalErrorMessage, targetExceptionClass);
+        }
     }
 }

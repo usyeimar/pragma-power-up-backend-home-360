@@ -1,8 +1,9 @@
-package com.pragma.home360.home.domain.usecases;
+package com.pragma.home360.home.unit.domain.usecases;
 
 import com.pragma.home360.home.domain.exceptions.ValidationException;
 import com.pragma.home360.home.domain.model.DepartmentModel;
 import com.pragma.home360.home.domain.ports.out.DepartmentPersistencePort;
+import com.pragma.home360.home.domain.usecases.DepartmentUseCase;
 import com.pragma.home360.home.domain.utils.constants.DomainConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

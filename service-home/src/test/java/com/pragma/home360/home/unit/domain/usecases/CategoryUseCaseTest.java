@@ -1,14 +1,15 @@
-package com.pragma.home360.home.domain.usecases;
+package com.pragma.home360.home.unit.domain.usecases;
 
 import com.pragma.home360.home.domain.exceptions.AlreadyExistsException;
 import com.pragma.home360.home.domain.exceptions.ValidationException;
 import com.pragma.home360.home.domain.model.CategoryFilterModel;
 import com.pragma.home360.home.domain.model.CategoryModel;
 import com.pragma.home360.home.domain.ports.out.CategoryPersistencePort;
+import com.pragma.home360.home.domain.usecases.CategoryUseCase;
 import com.pragma.home360.home.domain.utils.constants.DomainConstants;
 import com.pragma.home360.home.domain.utils.pagination.PagedResult;
-import com.pragma.home360.home.mocks.CategoryFilterMock;
-import com.pragma.home360.home.mocks.CategoryMock;
+import com.pragma.home360.home.unit.mocks.CategoryFilterMock;
+import com.pragma.home360.home.unit.mocks.CategoryMock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

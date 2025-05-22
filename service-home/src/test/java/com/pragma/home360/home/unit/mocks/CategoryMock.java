@@ -1,4 +1,4 @@
-package com.pragma.home360.home.mocks;
+package com.pragma.home360.home.unit.mocks;
 
 import com.pragma.home360.home.domain.model.CategoryModel;
 
