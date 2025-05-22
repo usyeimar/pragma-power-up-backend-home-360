@@ -1,25 +1,24 @@
 # 🏡  Home360: Tu casa a un clic
 
-## 1. Resumen Ejecutivo 📜
+## Resumen 📜
 
 Home360 es una plataforma inmobiliaria digital construida sobre una **arquitectura de microservicios**. El sistema prioriza la modularidad, escalabilidad y mantenibilidad. La orquestación en desarrollo se gestiona con **Docker y Docker Compose**.
 
-## 2. Componentes Centrales de la Arquitectura 🏗️
+## Componentes Centrales de la Arquitectura 🏗️
 
 * **🚪 API Gateway (`service-gateway`)**:
     * **Tecnología**: Spring Cloud Gateway MVC.
     * **Responsabilidad**: Único punto de entrada (SPE). Enrutamiento, validación de JWT (OAuth2 Resource Server), agregación de Swagger UI.
-    * **Filtro Clave**: `ClaimsToHeadersFilter` para propagar `X-User-Id` y `X-User-Roles` a servicios internos.
-    * **Puerto (def.)**: `${SERVER_PORT_API_GATEWAY}` (e.g., 8080).
+    * **Puerto (8080).
 
 * **🧭 Service Discovery (`service-discovery`)**:
     * **Tecnología**: Netflix Eureka Server.
     * **Responsabilidad**: Registro y descubrimiento dinámico de instancias de microservicios.
-    * **Puerto (def.)**: `${SERVICE_DISCOVERY_PORT}` (e.g., 8761).
+    * **Puerto(8761).
 
 * **🧩 Microservicios de Negocio**:
-    * **👤 `service-user`**: Gestión de usuarios, autenticación (emisión de JWT), roles. BD: `services_user`. Puerto (def.): `${SERVER_PORT_SERVICE_USER}` (e.g., 8081).
-    * **🏠 `service-home`**: CRUD de propiedades, categorías, ubicaciones (departamentos, ciudades, barrios), gestión de imágenes (almacenamiento local), tareas programadas para actualización de estado de propiedades. BD: `services_home`. Puerto (def.): `${SERVER_PORT_SERVICE_HOME}` (e.g., 8082).
+    * **👤 `service-user`**: Gestión de usuarios, autenticación (emisión de JWT), roles. BD: `services_user`. Puerto (8081).
+    * **🏠 `service-home`**: CRUD de propiedades, categorías, ubicaciones (departamentos, ciudades, barrios), gestión de imágenes (almacenamiento local), tareas programadas para actualización de estado de propiedades. BD: `services_home`. Puerto  (8082).
     * **🚶 `service-visits`**: Gestión de visitas a propiedades (desarrollo inicial). BD: `services_visits`. Puerto (def.): `${SERVER_PORT_SERVICE_VISITS}` (e.g., 8083).
     * **💸 `service-transactions`**: Gestión de transacciones inmobiliarias (desarrollo inicial). BD: `services_transactions`. Puerto (def.): `${SERVER_PORT_SERVICE_TRANSACTIONS}` (e.g., 8084).
 
@@ -32,7 +31,7 @@ Home360 es una plataforma inmobiliaria digital construida sobre una **arquitectu
     * **`phpmyadmin`**: Administración web para MySQL. Puerto (host def.): `${PHPMYADMIN_PORT}` (e.g., 8086).
     * **⚙️ `service-config`**: Spring Cloud Config Server (uso limitado en `compose.yml` actual, configuración principal por variables de entorno). Puerto (def.): `8085`.
 
-## 3. Stack Tecnológico Clave 💻
+## Stack Tecnológico Clave 💻
 
 * **Backend**: Java 17 ☕, Spring Boot 3.x (MVC, Data JPA, Security).
 * **Orquestación/Contenerización**: Docker 🐳, Docker Compose.
@@ -52,7 +51,7 @@ Home360 es una plataforma inmobiliaria digital construida sobre una **arquitectu
 5.  **Propagación de Identidad**: `ClaimsToHeadersFilter` añade `X-User-Id` y `X-User-Roles` a la petición antes de reenviar al microservicio interno.
 6.  **Autorización en Microservicios**: Servicios internos pueden usar estas cabeceras para lógica de negocio o autorización granular.
 
-## 5. Estructura del Repositorio 📂
+## Estructura del Repositorio 📂
 
 ```bash
 .
@@ -76,7 +75,7 @@ Home360 es una plataforma inmobiliaria digital construida sobre una **arquitectu
     └── property-images/
 ```
 
-## 6. Inicio Rápido (Comandos Esenciales) 🚀
+## Inicio Rápido (Comandos Esenciales) 🚀
 
 1.  **Clonar Repositorio**: `git clone <URL_REPO>`
 2.  **Configurar `.env`**: Opcional, para variables de entorno (ver `compose.yml`).
