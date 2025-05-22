@@ -10,7 +10,7 @@ La orquestación en desarrollo se gestiona con **Docker y Docker Compose**.
 * **🚪 API Gateway (`service-gateway`)**:
     * **Tecnología**: Spring Cloud Gateway MVC.
     * **Responsabilidad**: Único punto de entrada (SPE). Enrutamiento, validación de JWT (OAuth2 Resource Server), agregación de Swagger UI.
-    * **Puerto (8080).
+    * **Puerto** (8080).
 
 * **🧭 Service Discovery (`service-discovery`)**:
     * **Tecnología**: Netflix Eureka Server.
