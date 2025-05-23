@@ -32,7 +32,7 @@ public class PropertyEntity {
     @Column(name = "number_of_bathrooms", nullable = false)
     private Integer numberOfBathrooms;
 
-    @Column(name = "price", precision = 10, scale = 2)
+    @Column(name = "price", precision = 12, scale = 2)
     private BigDecimal price;
 
     @Column(name = "active_publication_date")

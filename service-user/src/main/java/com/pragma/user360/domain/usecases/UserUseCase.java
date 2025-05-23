@@ -8,10 +8,13 @@ import com.pragma.user360.domain.ports.out.PasswordEncoderPort;
 import com.pragma.user360.domain.ports.out.UserPersistencePort;
 import com.pragma.user360.domain.utils.constants.DomainConstants;
 import com.pragma.user360.domain.utils.pagination.PagedResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.util.StringUtils;
 
 import java.util.Optional;
 
+@Slf4j
 public class UserUseCase implements UserServicePort {
 
     private final UserPersistencePort userPersistencePort;
@@ -25,9 +28,22 @@ public class UserUseCase implements UserServicePort {
     @Override
     public UserModel registerUser(UserModel userModel) {
         validateUserUniqueness(userModel);
-
         userModel.setPassword(passwordEncoderPort.encode(userModel.getPassword()));
-        userModel.setRole(DomainConstants.ROLE_VENDEDOR);
+        if (userModel.getRole() == null || !StringUtils.hasText(userModel.getRole())) {
+            userModel.setRole(DomainConstants.ROLE_SELLER);
+        } else {
+            log.info("Registrando usuario {} con el rol especificado: {}", userModel.getRole(),
+                    userModel.getEmail());
+
+        }
+
+        if (userModel.getActive()) {
+            userModel.setActive(true);
+        } else {
+            log.info("Registrando usuario {} con el estado especificado: {}", userModel.getActive(),
+                    userModel.getEmail());
+        }
+
 
         return userPersistencePort.saveUser(userModel);
     }

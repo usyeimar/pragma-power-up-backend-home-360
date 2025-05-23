@@ -1,3 +1,7 @@
+// =================================================================
+// service-user/src/main/java/com/pragma/user360/infrastructure/adapters/security/JwtTokenProvider.java
+// (Versión con Nimbus para HS512)
+// =================================================================
 package com.pragma.user360.infrastructure.adapters.security;
 
 import com.nimbusds.jose.*;
@@ -28,7 +32,7 @@ import java.util.stream.Collectors;
 @Component
 public class JwtTokenProvider {
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
-    private static final int RECOMMENDED_HS512_SECRET_LENGTH_BYTES = 64; // 512 bits
+    private static final int RECOMMENDED_HS512_SECRET_LENGTH_BYTES = 128;
 
     private final UserPersistencePort userPersistencePort;
 
@@ -74,7 +78,10 @@ public class JwtTokenProvider {
         }
     }
 
-    public String generateToken(Authentication authentication) {
+    public record TokenDetails(String token, Date issuedAtDate) {
+    }
+
+    public TokenDetails generateTokenDetails(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
         UserModel userModel = userPersistencePort.getUserByEmail(userPrincipal.getUsername())
                 .orElseThrow(() -> {
@@ -87,20 +94,20 @@ public class JwtTokenProvider {
 
         List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList()); // Usar collect para mutabilidad si es necesario, o List.copyOf para inmutabilidad
+                .collect(Collectors.toList());
 
         log.debug("Generating HS512 token for user: {}, roles: {}", userPrincipal.getUsername(), roles);
 
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                 .subject(userModel.getId().toString())
                 .issuer(jwtIssuerUri)
-                .issueTime(now)
-                .expirationTime(expiryDate)
-                .claim("role", roles.isEmpty() ? null : roles.get(0)) // Tomar el primer rol
+                .issueTime(now) // iat
+                .expirationTime(expiryDate) // exp
+                .claim("role", roles.isEmpty() ? null : roles.get(0))
                 .claim("email", userModel.getEmail())
                 .build();
 
-        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), claimsSet);
 
         try {
             signedJWT.sign(this.signer);
@@ -109,8 +116,9 @@ public class JwtTokenProvider {
             throw new RuntimeException("Error signing JWT", e);
         }
 
-        return signedJWT.serialize();
+        return new TokenDetails(signedJWT.serialize(), now);
     }
+
 
     public String getUsernameFromJWT(String token) { // Devuelve el email
         if (!StringUtils.hasText(token)) {
@@ -128,7 +136,6 @@ public class JwtTokenProvider {
                 return email;
             }
 
-            // Fallback si el email no está como claim (aunque debería estarlo)
             String userId = claimsSet.getSubject();
             if (userId == null) {
                 log.error("Subject (user ID) not found in JWT");
@@ -158,39 +165,32 @@ public class JwtTokenProvider {
         try {
             SignedJWT signedJWT = SignedJWT.parse(token.trim());
 
-            // 1. Verificar la firma
             if (!signedJWT.verify(this.verifier)) {
                 log.error("Invalid JWT signature (expected HS512)");
                 return false;
             }
 
-            // 2. Verificar claims (expiración, issuer)
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             Date now = new Date();
 
-            // Verificar expiración
             Date expirationTime = claimsSet.getExpirationTime();
             if (expirationTime == null || expirationTime.before(now)) {
                 log.error("Expired JWT token");
                 return false;
             }
 
-            // Verificar issuer
             String issuer = claimsSet.getIssuer();
             if (!jwtIssuerUri.equals(issuer)) {
                 log.error("Invalid JWT issuer. Expected: {}, Actual: {}", jwtIssuerUri, issuer);
                 return false;
             }
 
-            // Puedes añadir más validaciones de claims aquí si es necesario (nbf, aud, etc.)
-
             return true;
         } catch (ParseException e) {
             log.error("Invalid JWT token (malformed): {}", e.getMessage());
         } catch (JOSEException e) {
-            // Esto podría ocurrir si la clave es incorrecta para el algoritmo, etc.
             log.error("JOSE error during JWT validation (e.g., signature verification failed): {}", e.getMessage());
-        } catch (Exception ex) { // Captura genérica para otros errores inesperados
+        } catch (Exception ex) {
             log.error("Unexpected error validating JWT token (expected HS512): {}", ex.getMessage(), ex);
         }
         return false;

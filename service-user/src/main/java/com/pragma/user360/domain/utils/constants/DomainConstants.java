@@ -8,11 +8,9 @@ public final class DomainConstants {
     }
 
     // Roles
-    public static final String ROLE_VENDEDOR = "VENDEDOR";
-    public static final String ROLE_CLIENTE = "CLIENTE";
-    public static final String ROLE_ADMIN = "ADMINISTRADOR";
-    public static final String ROLE_USER = "USER";
-    public static final String ROLE_GUEST = "GUEST";
+    public static final String ROLE_SELLER = "SELLER";
+    public static final String ROLE_CUSTOMER = "CUSTOMER";
+    public static final String ROLE_ADMIN = "ADMIN";
 
 
     // Validaciones generales

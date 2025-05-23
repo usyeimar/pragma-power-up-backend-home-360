@@ -25,12 +25,17 @@ import org.springframework.security.oauth2.server.resource.web.authentication.Be
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.util.StringUtils;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Configuration
@@ -38,12 +43,14 @@ import java.util.stream.Collectors;
 public class SecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
-    private static final String JWT_ALGORITHM = "HmacSHA256";
+    private static final String JWT_ALGORITHM = "HmacSHA512";
 
     @Value("${app.jwt.secret}")
     private String jwtSecretString;
 
     private final ObjectMapper objectMapper;
+    @Value("${app.allowed-origins}")
+    private String allowedOrigins;
 
     public SecurityConfig(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -70,7 +77,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(customAuthenticationEntryPoint())
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .cors(AbstractHttpConfigurer::disable)
+                .cors(customizer -> customizer.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable);
 
         http.addFilterAfter(claimsToHeadersFilter, BearerTokenAuthenticationFilter.class);
@@ -101,6 +108,33 @@ public class SecurityConfig {
         log.info("Shared SecretKey Bean (API Gateway) created for {} algorithm.", JWT_ALGORITHM);
         return secretKey;
     }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        if (StringUtils.hasText(allowedOrigins)) {
+            List<String> allowedOriginList = Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+            configuration.setAllowedOrigins(allowedOriginList);
+        } else {
+            log.warn("No se han configurado orígenes permitidos para CORS. Se permitirán todos los orígenes.");
+            configuration.setAllowedOrigins(List.of("*"));
+        }
+
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", "X-User-Id", "X-User-Roles"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "X-User-Id", "X-User-Roles"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        log.info("Fuente de configuracion CORS registrada para todas las rutas ('/**').");
+        return source;
+    }
+
 
     @Bean
     public AuthenticationEntryPoint customAuthenticationEntryPoint() {

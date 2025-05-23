@@ -124,8 +124,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
         List<GrantedAuthority> authorities;
         if (userModel.getRole() != null && !userModel.getRole().isBlank()) {
-            // Prefixing with "ROLE_" is a common convention in Spring Security
-            authorities = List.of(new SimpleGrantedAuthority("ROLE_" + userModel.getRole()));
+            authorities = List.of(new SimpleGrantedAuthority(userModel.getRole()));
             log.debug("User authorities: {}", authorities);
         } else {
             log.warn("User {} has no role assigned.", username);

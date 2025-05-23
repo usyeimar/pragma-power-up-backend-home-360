@@ -5,8 +5,6 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/services_user}
     username: ${SPRING_DATASOURCE_USERNAME:karenyulier}
     password: ${SPRING_DATASOURCE_PASSWORD:12345678}
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
-
 
   jpa:
     hibernate:
@@ -39,11 +37,29 @@ eureka:
   instance:
     instance-id: ${spring.application.name}:${random.uuid}
 
-# Default user for data initialization (can be overridden by environment variables)
-app.default-user:
-  email: ${DEFAULT_USER_EMAIL:admin@example.com}
-  password: ${DEFAULT_USER_PASSWORD:DefaultPassword123}
-  firstName: ${DEFAULT_USER_FIRSTNAME:Admin}
-  lastName: ${DEFAULT_USER_LASTNAME:User}
-  documentId: ${DEFAULT_USER_DOCUMENTID:00000000}
-  phoneNumber: ${DEFAULT_USER_PHONENUMBER:+1000000000}
+# Default Admin User
+app.admin-user:
+  email: ${ADMIN_USER_EMAIL:admin@example.com}
+  password: ${ADMIN_USER_PASSWORD:admin123!}
+  firstName: ${ADMIN_USER_FIRSTNAME:John}
+  lastName: ${ADMIN_USER_LASTNAME:Doe}
+  documentId: ${ADMIN_USER_DOCUMENTID:00000001}
+  phoneNumber: ${ADMIN_USER_PHONENUMBER:+1000000001}
+
+# Default Seller User
+app.seller-user:
+  email: ${SELLER_USER_EMAIL:seller@example.com}
+  password: ${SELLER_USER_PASSWORD:anna123!}
+  firstName: ${SELLER_USER_FIRSTNAME:Anna}
+  lastName: ${SELLER_USER_LASTNAME:Doe}
+  documentId: ${SELLER_USER_DOCUMENTID:00000002}
+  phoneNumber: ${SELLER_USER_PHONENUMBER:+1000000002}
+
+# Default Customer User
+app.customer-user:
+  email: ${CUSTOMER_USER_EMAIL:customer@example.com}
+  password: ${CUSTOMER_USER_PASSWORD:homero123!}
+  firstName: ${CUSTOMER_USER_FIRSTNAME:Homero}
+  lastName: ${CUSTOMER_USER_LASTNAME:Doe}
+  documentId: ${CUSTOMER_USER_DOCUMENTID:00000003}
+  phoneNumber: ${CUSTOMER_USER_PHONENUMBER:+1000000003}

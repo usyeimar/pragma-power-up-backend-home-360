@@ -91,7 +91,10 @@ app:
     secret: ${APP_JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
     expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
     prefix: ${APP_JWT_PREFIX:Bearer }
-    header-string: ${APP_JWT_HEADER_STRING:Authorization}
+    header: ${APP_JWT_HEADER_STRING:Authorization}
+    issuer-uri: ${APP_JWT_ISSUER_URI:http://user-microservice}
+
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
 
 
 springdoc:
