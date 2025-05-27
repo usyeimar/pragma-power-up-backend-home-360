@@ -6,7 +6,6 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-
       mvc:
         routes:
           - id: user-microservice-api-docs
@@ -62,13 +61,6 @@ spring:
             predicates:
               - Path=/api/v1/transactions/**
 
-
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${APP_JWT_ISSUER_URI:http://user-microservice}
-
 eureka:
   client:
     serviceUrl:
@@ -85,12 +77,27 @@ logging:
     org.springframework.security.oauth2: DEBUG
     com.pragma.gateway360.config: DEBUG
     com.nimbusds.jose: DEBUG
+    com.nimbusds.jose.jwk: DEBUG
+    com.nimbusds.jose.proc: DEBUG
+    com.nimbusds.jose.util: DEBUG
+    com.nimbusds.jwt: DEBUG
+    com.nimbusds.jwt.proc: DEBUG
+    com.nimbusds.jwt.util: DEBUG
+    com.nimbusds.jose.crypto: DEBUG
+    com.nimbusds.jose.crypto.impl: DEBUG
+    com.nimbusds.jose.crypto.ec: DEBUG
+    com.nimbusds.jose.crypto.impl.ec: DEBUG
+    com.nimbusds.jose.crypto.impl.ec.ECKeyLoader: DEBUG
+    com.nimbusds.jose.crypto.impl.ec.ECKeyLoader$1: DEBUG
+    com.nimbusds.jose.crypto.impl.ec.ECKeyLoader$2: DEBUG
+    com.nimbusds.jose.crypto.impl.ec.ECKeyLoader$3: DEBUG
+    com.nimbusds.jose.crypto.impl.ec.ECKeyLoader$4: DEBUG
 
 app:
   jwt:
     secret: ${APP_JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
     expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
-    prefix: ${APP_JWT_PREFIX:Bearer }
+    prefix: ${APP_JWT_PREFIX:Bearer}
     header: ${APP_JWT_HEADER_STRING:Authorization}
     issuer-uri: ${APP_JWT_ISSUER_URI:http://user-microservice}
 

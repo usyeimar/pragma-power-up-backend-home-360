@@ -7,6 +7,8 @@ package com.pragma.user360.infrastructure.adapters.security;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.pragma.user360.domain.model.UserModel;
@@ -24,6 +26,7 @@ import org.springframework.util.StringUtils;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.interfaces.ECKey;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
@@ -81,7 +84,7 @@ public class JwtTokenProvider {
     public record TokenDetails(String token, Date issuedAtDate) {
     }
 
-    public TokenDetails generateTokenDetails(Authentication authentication) {
+    public TokenDetails generateTokenDetails(Authentication authentication) throws JOSEException {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
         UserModel userModel = userPersistencePort.getUserByEmail(userPrincipal.getUsername())
                 .orElseThrow(() -> {
@@ -98,7 +101,12 @@ public class JwtTokenProvider {
 
         log.debug("Generating HS512 token for user: {}, roles: {}", userPrincipal.getUsername(), roles);
 
-        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+        var key = new ECKeyGenerator(Curve.P_256)
+                .keyID("user360-key")
+                .generate();
+
+
+        JWTClaimsSet payload = new JWTClaimsSet.Builder()
                 .subject(userModel.getId().toString())
                 .issuer(jwtIssuerUri)
                 .issueTime(now) // iat
@@ -107,7 +115,7 @@ public class JwtTokenProvider {
                 .claim("email", userModel.getEmail())
                 .build();
 
-        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), claimsSet);
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), payload);
 
         try {
             signedJWT.sign(this.signer);
