@@ -1,5 +1,6 @@
 package com.pragma.user360.application.services.impl;
 
+import com.nimbusds.jose.JOSEException;
 import com.pragma.user360.application.dto.request.SignUpRequest;
 import com.pragma.user360.application.dto.response.LoginResponse;
 import com.pragma.user360.application.dto.response.UserResponse;
@@ -37,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private Long tokenExpirationMs;
 
     @Override
-    public LoginResponse signIn(String email, String password) {
+    public LoginResponse signIn(String email, String password) throws JOSEException {
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                 email,
                 password

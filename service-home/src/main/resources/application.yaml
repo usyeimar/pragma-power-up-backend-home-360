@@ -6,7 +6,7 @@ spring:
       max-request-size: 10MB
 
   application:
-    name: home-microservice
+    name: service-home
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/services_home}
     username: ${SPRING_DATASOURCE_USERNAME:karenyulier}

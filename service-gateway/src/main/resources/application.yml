@@ -3,24 +3,24 @@ server:
 
 spring:
   application:
-    name: api-gateway
+    name: service-gateway
   cloud:
     gateway:
       mvc:
         routes:
-          - id: user-microservice-api-docs
-            uri: lb://user-microservice
+          - id: service-user-api-docs
+            uri: lb://service-user
             predicates:
-              - Path=/v3/api-docs/user-microservice
+              - Path=/v3/api-docs/service-user
             filters:
-              - RewritePath=/v3/api-docs/user-microservice, /v3/api-docs
+              - RewritePath=/v3/api-docs/service-user, /v3/api-docs
 
-          - id: home-microservice-api-docs
-            uri: lb://home-microservice
+          - id: service-home-api-docs
+            uri: lb://service-home
             predicates:
-              - Path=/v3/api-docs/home-microservice
+              - Path=/v3/api-docs/service-home
             filters:
-              - RewritePath=/v3/api-docs/home-microservice, /v3/api-docs
+              - RewritePath=/v3/api-docs/service-home, /v3/api-docs
 
           - id: service-visits-api-docs
             uri: lb://service-visits
@@ -39,13 +39,13 @@ spring:
 
 
           - id: service-user-route
-            uri: lb://user-microservice
+            uri: lb://service-user
             predicates:
-              - Path=/api/v1/users/**, /api/v1/auth/**
+              - Path=/api/v1/users/**, /api/v1/auth/** , /.well-known/jwks.json
 
 
           - id: service-home-route
-            uri: lb://home-microservice
+            uri: lb://service-home
             predicates:
               - Path=/api/v1/categories/**, /api/v1/cities/**, /api/v1/departments/**, /api/v1/locations/**, /api/v1/neighborhoods/**, /api/v1/properties/**
 
@@ -61,6 +61,13 @@ spring:
             predicates:
               - Path=/api/v1/transactions/**
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jws-algorithms: RS256
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://service-user}
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:lb://service-user/.well-known/jwks.json}
 eureka:
   client:
     serviceUrl:
@@ -99,7 +106,7 @@ app:
     expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
     prefix: ${APP_JWT_PREFIX:Bearer}
     header: ${APP_JWT_HEADER_STRING:Authorization}
-    issuer-uri: ${APP_JWT_ISSUER_URI:http://user-microservice}
+    issuer-uri: ${APP_JWT_ISSUER_URI:http://service-user}
 
   allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
 
@@ -109,9 +116,9 @@ springdoc:
     path: /swagger-ui.html
     urls:
       - name: User
-        url: /v3/api-docs/user-microservice
+        url: /v3/api-docs/service-user
       - name: Home
-        url: /v3/api-docs/home-microservice
+        url: /v3/api-docs/service-home
       - name: Visits
         url: /v3/api-docs/service-visits
       - name: Transactions

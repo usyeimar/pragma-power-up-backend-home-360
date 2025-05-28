@@ -1,14 +1,10 @@
-// =================================================================
-// service-user/src/main/java/com/pragma/user360/infrastructure/adapters/security/JwtTokenProvider.java
-// (Versión con Nimbus para HS512)
-// =================================================================
 package com.pragma.user360.infrastructure.adapters.security;
 
 import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.MACSigner;
-import com.nimbusds.jose.crypto.MACVerifier;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.pragma.user360.domain.model.UserModel;
@@ -17,17 +13,25 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.interfaces.ECKey;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,12 +39,17 @@ import java.util.stream.Collectors;
 @Component
 public class JwtTokenProvider {
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
-    private static final int RECOMMENDED_HS512_SECRET_LENGTH_BYTES = 128;
 
     private final UserPersistencePort userPersistencePort;
 
-    @Value("${app.jwt.secret}")
-    private String jwtSecretString;
+    @Value("${app.jwt.rsa.private-key-path}")
+    private Resource rsaPrivateKeyResource;
+
+    @Value("${app.jwt.rsa.public-key-path}")
+    private Resource rsaPublicKeyResource;
+
+    @Value("${app.jwt.rsa.key-id}")
+    private String rsaKeyId;
 
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationInMs;
@@ -48,8 +57,10 @@ public class JwtTokenProvider {
     @Value("${app.jwt.issuer-uri:http://user-microservice}")
     private String jwtIssuerUri;
 
-    private MACSigner signer;
-    private MACVerifier verifier;
+    private RSAPrivateKey rsaPrivateKey;
+    private RSAPublicKey rsaPublicKey;
+    private RSASSASigner signer;
+    private RSASSAVerifier verifier;
 
     public JwtTokenProvider(UserPersistencePort userPersistencePort) {
         this.userPersistencePort = userPersistencePort;
@@ -57,34 +68,54 @@ public class JwtTokenProvider {
 
     @PostConstruct
     public void init() {
-        if (!StringUtils.hasText(jwtSecretString)) {
-            log.error("JWT Secret is missing! Please configure 'app.jwt.secret'");
-            throw new IllegalStateException("JWT Secret is missing");
-        }
-
-        byte[] keyBytes = jwtSecretString.getBytes(StandardCharsets.UTF_8);
-
-        if (keyBytes.length < RECOMMENDED_HS512_SECRET_LENGTH_BYTES) {
-            log.warn("JWT Secret ({} bytes) is shorter than the recommended {} bytes for HS512. Ensure this key is strong enough.",
-                    keyBytes.length, RECOMMENDED_HS512_SECRET_LENGTH_BYTES);
-        }
-
         try {
-            SecretKey sharedSecretKey = new SecretKeySpec(keyBytes, "HmacSHA512");
-            this.signer = new MACSigner(sharedSecretKey);
-            this.verifier = new MACVerifier(sharedSecretKey);
-            log.info("JWT components (Signer/Verifier) initialized successfully for HmacSHA512.");
+            this.rsaPrivateKey = loadPrivateKey(rsaPrivateKeyResource);
+            this.rsaPublicKey = loadPublicKey(rsaPublicKeyResource);
+            this.signer = new RSASSASigner(this.rsaPrivateKey);
+            this.verifier = new RSASSAVerifier(this.rsaPublicKey);
+            log.info("JWT components (Signer/Verifier) initialized successfully for RS256 with Key ID: {}", rsaKeyId);
             log.info("JWT Issuer URI: {}", jwtIssuerUri);
-        } catch (JOSEException e) {
-            log.error("Error initializing JWT Signer/Verifier for HmacSHA512: {}", e.getMessage());
-            throw new IllegalStateException("Error initializing JWT Signer/Verifier for HmacSHA512", e);
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
+            log.error("Error initializing RSA JWT components: {}", e.getMessage(), e);
+            throw new IllegalStateException("Error initializing RSA JWT components", e);
         }
     }
 
-    public record TokenDetails(String token, Date issuedAtDate) {
+    private RSAPrivateKey loadPrivateKey(Resource resource) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        try (InputStream keyStream = resource.getInputStream()) {
+            String pemEncodedKey = new String(keyStream.readAllBytes(), StandardCharsets.UTF_8);
+            String privateKeyPEM = pemEncodedKey
+                    .replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replaceAll(System.lineSeparator(), "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s", "");
+
+            byte[] encodedBytes = Base64.getDecoder().decode(privateKeyPEM);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encodedBytes);
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            return (RSAPrivateKey) kf.generatePrivate(keySpec);
+        }
     }
 
-    public TokenDetails generateTokenDetails(Authentication authentication) throws JOSEException {
+    private RSAPublicKey loadPublicKey(Resource resource) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        try (InputStream keyStream = resource.getInputStream()) {
+            String pemEncodedKey = new String(keyStream.readAllBytes(), StandardCharsets.UTF_8);
+            String publicKeyPEM = pemEncodedKey
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replaceAll(System.lineSeparator(), "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s", "");
+
+            byte[] encodedBytes = Base64.getDecoder().decode(publicKeyPEM);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedBytes);
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            return (RSAPublicKey) kf.generatePublic(keySpec);
+        }
+    }
+
+    public record TokenDetails(String token, Date issuedAtDate) {}
+
+    public TokenDetails generateTokenDetails(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
         UserModel userModel = userPersistencePort.getUserByEmail(userPrincipal.getUsername())
                 .orElseThrow(() -> {
@@ -99,43 +130,43 @@ public class JwtTokenProvider {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
-        log.debug("Generating HS512 token for user: {}, roles: {}", userPrincipal.getUsername(), roles);
-
-        var key = new ECKeyGenerator(Curve.P_256)
-                .keyID("user360-key")
-                .generate();
-
+        log.debug("Generating RS256 token for user: {}, roles: {}", userPrincipal.getUsername(), roles);
 
         JWTClaimsSet payload = new JWTClaimsSet.Builder()
                 .subject(userModel.getId().toString())
                 .issuer(jwtIssuerUri)
-                .issueTime(now) // iat
-                .expirationTime(expiryDate) // exp
+                .issueTime(now)
+                .expirationTime(expiryDate)
                 .claim("role", roles.isEmpty() ? null : roles.get(0))
                 .claim("email", userModel.getEmail())
                 .build();
 
-        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), payload);
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
+                .keyID(this.rsaKeyId)
+                .type(JOSEObjectType.JWT)
+                .build();
+
+        SignedJWT signedJWT = new SignedJWT(header, payload);
 
         try {
             signedJWT.sign(this.signer);
         } catch (JOSEException e) {
-            log.error("Error signing JWT: {}", e.getMessage(), e);
-            throw new RuntimeException("Error signing JWT", e);
+            log.error("Error signing JWT with RS256: {}", e.getMessage(), e);
+            throw new RuntimeException("Error signing JWT with RS256", e);
         }
 
         return new TokenDetails(signedJWT.serialize(), now);
     }
 
-
-    public String getUsernameFromJWT(String token) { // Devuelve el email
+    public String getUsernameFromJWT(String token) {
         if (!StringUtils.hasText(token)) {
             throw new IllegalArgumentException("JWT token cannot be null or empty");
         }
         try {
             SignedJWT signedJWT = SignedJWT.parse(token.trim());
             if (!signedJWT.verify(this.verifier)) {
-                throw new JOSEException("JWT signature verification failed!");
+                log.warn("JWT signature verification failed for RS256!");
+                throw new JOSEException("JWT signature verification failed for RS256!");
             }
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
@@ -160,8 +191,8 @@ public class JwtTokenProvider {
             log.error("Invalid JWT token (malformed): {}", e.getMessage());
             throw new RuntimeException("Invalid JWT token (malformed)", e);
         } catch (JOSEException e) {
-            log.error("Error processing JWT (expected HS512): {}", e.getMessage());
-            throw new RuntimeException("Error processing JWT (expected HS512)", e);
+            log.error("Error processing RS256 JWT: {}", e.getMessage());
+            throw new RuntimeException("Error processing RS256 JWT", e);
         }
     }
 
@@ -174,7 +205,7 @@ public class JwtTokenProvider {
             SignedJWT signedJWT = SignedJWT.parse(token.trim());
 
             if (!signedJWT.verify(this.verifier)) {
-                log.error("Invalid JWT signature (expected HS512)");
+                log.warn("Invalid JWT signature (RS256). Token: {}", token);
                 return false;
             }
 
@@ -183,24 +214,37 @@ public class JwtTokenProvider {
 
             Date expirationTime = claimsSet.getExpirationTime();
             if (expirationTime == null || expirationTime.before(now)) {
-                log.error("Expired JWT token");
+                log.warn("Expired JWT token. Expiration: {}, Current: {}. Token: {}", expirationTime, now, token);
                 return false;
             }
 
             String issuer = claimsSet.getIssuer();
             if (!jwtIssuerUri.equals(issuer)) {
-                log.error("Invalid JWT issuer. Expected: {}, Actual: {}", jwtIssuerUri, issuer);
+                log.warn("Invalid JWT issuer. Expected: {}, Actual: {}. Token: {}", jwtIssuerUri, issuer, token);
                 return false;
             }
 
+            log.trace("Token validated successfully (RS256).");
             return true;
         } catch (ParseException e) {
-            log.error("Invalid JWT token (malformed): {}", e.getMessage());
+            log.warn("Invalid JWT token (malformed): {}. Token: {}", e.getMessage(), token);
         } catch (JOSEException e) {
-            log.error("JOSE error during JWT validation (e.g., signature verification failed): {}", e.getMessage());
+            log.warn("JOSE error during JWT validation (RS256): {}. Token: {}", e.getMessage(), token);
         } catch (Exception ex) {
-            log.error("Unexpected error validating JWT token (expected HS512): {}", ex.getMessage(), ex);
+            log.error("Unexpected error validating RS256 JWT token: {}. Token: {}", ex.getMessage(), token, ex);
         }
         return false;
+    }
+
+    public RSAKey getRsaPublicKeyAsJwk() {
+        if (this.rsaPublicKey == null || this.rsaKeyId == null) {
+            log.warn("RSA Public Key or Key ID is not initialized, cannot generate JWK.");
+            return null;
+        }
+        return new RSAKey.Builder(this.rsaPublicKey)
+                .keyID(this.rsaKeyId)
+                .keyUse(KeyUse.SIGNATURE)
+                .algorithm(JWSAlgorithm.RS256)
+                .build();
     }
 }

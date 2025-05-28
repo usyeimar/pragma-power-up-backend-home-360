@@ -1,6 +1,7 @@
 package com.pragma.user360.infrastructure.endpoints.rest;
 
 
+import com.nimbusds.jose.JOSEException;
 import com.pragma.user360.application.dto.request.SignInRequest;
 import com.pragma.user360.application.dto.request.SignUpRequest;
 import com.pragma.user360.application.dto.response.LoginResponse;
@@ -38,7 +39,7 @@ public class AuthController {
                     @ApiResponse(responseCode = "400", description = "Solicitud inválida (ej. campos faltantes o formato incorrecto)"),
                     @ApiResponse(responseCode = "401", description = "No autorizado (credenciales incorrectas o usuario inactivo)")
             })
-    public ResponseEntity<LoginResponse> signIn(@Valid @RequestBody SignInRequest loginRequest) {
+    public ResponseEntity<LoginResponse> signIn(@Valid @RequestBody SignInRequest loginRequest) throws JOSEException {
         LoginResponse response = authService.signIn(loginRequest.email(), loginRequest.password());
         return ResponseEntity.ok(response);
     }

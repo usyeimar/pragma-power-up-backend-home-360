@@ -1,6 +1,6 @@
 spring:
   application:
-    name: user-microservice
+    name: service-user
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/services_user}
     username: ${SPRING_DATASOURCE_USERNAME:karenyulier}
@@ -23,6 +23,11 @@ app:
     header: ${APP_JWT_HEADER_STRING:Authorization}
     prefix: ${APP_JWT_PREFIX:Bearer }
     issuer-uri: ${APP_JWT_ISSUER_URI:http://user-microservice}
+    rsa:
+        public-key-path: ${APP_JWT_RSA_PUBLIC_KEY_PATH:classpath:jwk/auth-public-key.pem}
+        private-key-path: ${APP_JWT_RSA_PRIVATE_KEY_PATH:classpath:jwk/auth-private-key.pem}
+        key-id: ${APP_JWT_RSA_KEY_ID:home-360}
+
 
 # Server
 server:

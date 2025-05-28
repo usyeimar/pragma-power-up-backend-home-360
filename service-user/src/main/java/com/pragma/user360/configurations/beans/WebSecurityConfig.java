@@ -36,7 +36,23 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable).exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint()).accessDeniedHandler(accessDeniedHandler())).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(authorize -> authorize.requestMatchers("/").permitAll().requestMatchers("/v3/api-docs/**").permitAll().requestMatchers("/swagger-ui/**").permitAll().requestMatchers("/swagger-ui.html").permitAll().requestMatchers("/swagger-resources/**").permitAll().requestMatchers("/webjars/**").permitAll().requestMatchers(HttpMethod.POST, "/api/v1/auth/sign-up").permitAll().requestMatchers(HttpMethod.POST, "/api/v1/auth/sign-in").permitAll().anyRequest().authenticated());
+        http.csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/swagger-ui.html").permitAll()
+                        .requestMatchers("/swagger-resources/**").permitAll()
+                        .requestMatchers("/webjars/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/sign-up").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/sign-in").permitAll()
+                        .requestMatchers("/.well-known/jwks.json").permitAll()
+                        .anyRequest()
+                        .authenticated()
+                );
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

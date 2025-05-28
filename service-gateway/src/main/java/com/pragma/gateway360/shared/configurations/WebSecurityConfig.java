@@ -1,15 +1,16 @@
 package com.pragma.gateway360.shared.configurations;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.gateway360.infrastructure.exceptionshandler.ExceptionResponse;
 import com.pragma.gateway360.shared.constants.GatewayConstants;
-import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,10 +30,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -40,29 +39,83 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig {
+public class WebSecurityConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
-    private static final String JWT_ALGORITHM = "HmacSHA512";
+    private static final Logger log = LoggerFactory.getLogger(WebSecurityConfig.class);
 
-    @Value("${app.jwt.secret}")
-    private String jwtSecretString;
+    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+    private String jwkSetUriFromProperties;
 
     private final ObjectMapper objectMapper;
+
     @Value("${app.allowed-origins}")
     private String allowedOrigins;
 
-    public SecurityConfig(ObjectMapper objectMapper) {
+    public WebSecurityConfig(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
     @Bean
-    public SecurityFilterChain customApiGatewaySecurityFilterChain(HttpSecurity http, ClaimsToHeadersFilter claimsToHeadersFilter) throws Exception {
+    public JwtDecoder jwtDecoder(LoadBalancerClient loadBalancerClient) {
+        if (!StringUtils.hasText(jwkSetUriFromProperties)) {
+            log.error("CRITICAL: API Gateway - JWK Set URI ('spring.security.oauth2.resourceserver.jwt.jwk-set-uri') is MISSING or EMPTY.");
+            throw new IllegalStateException("JWK Set URI is missing. Check 'spring.security.oauth2.resourceserver.jwt.jwk-set-uri' property.");
+        }
+
+        String finalUriToUse = jwkSetUriFromProperties;
+
+        if (jwkSetUriFromProperties.startsWith("lb://")) {
+            log.info("JWK Set URI starts with 'lb://'. Attempting to resolve using LoadBalancerClient: {}", jwkSetUriFromProperties);
+            try {
+                URI originalUri = new URI(jwkSetUriFromProperties);
+                String serviceId = originalUri.getHost();
+
+                if (serviceId == null) {
+                    log.error("Invalid lb:// URI: {} - serviceId (host) is null.", jwkSetUriFromProperties);
+                    throw new IllegalStateException("Invalid lb:// URI: " + jwkSetUriFromProperties + " - serviceId (host) is null.");
+                }
+
+                String serviceIdForLookup = serviceId.toUpperCase();
+                log.info("Attempting to choose instance for serviceId '{}' (derived from {}).", serviceIdForLookup, jwkSetUriFromProperties);
+                ServiceInstance instance = loadBalancerClient.choose(serviceIdForLookup);
+
+                if (instance == null) {
+                    log.error("Service instance NOT FOUND for serviceId: '{}'. Check Eureka registration and ensure the service name in 'jwk-set-uri' ('{}') matches the registered name (case-sensitive, often uppercase in Eureka).",
+                            serviceIdForLookup, serviceId);
+                    throw new IllegalStateException("Could not find instance of service " + serviceIdForLookup + " for JWK Set URI " + jwkSetUriFromProperties);
+                }
+
+                String path = originalUri.getPath() != null ? originalUri.getPath() : "";
+                String query = originalUri.getQuery() != null ? "?" + originalUri.getQuery() : "";
+                String fragment = originalUri.getFragment() != null ? "#" + originalUri.getFragment() : "";
+
+                finalUriToUse = instance.getUri().toString() + path + query + fragment;
+                log.info("Successfully resolved JWK Set URI from '{}' to '{}' using LoadBalancerClient for serviceId '{}'.", jwkSetUriFromProperties, finalUriToUse, serviceId);
+
+            } catch (java.net.URISyntaxException e) {
+                log.error("Invalid lb:// URI syntax for JWK Set URI: {}. Error: {}", jwkSetUriFromProperties, e.getMessage(), e);
+                throw new IllegalStateException("Invalid lb:// URI syntax for JWK Set URI: " + jwkSetUriFromProperties, e);
+            } catch (Exception e) {
+                log.error("Unexpected error resolving lb:// URI for JWK Set: {}. Error: {}", jwkSetUriFromProperties, e.getMessage(), e);
+                throw new IllegalStateException("Unexpected error resolving lb:// URI: " + jwkSetUriFromProperties, e);
+            }
+        } else {
+            log.info("Using direct JWK Set URI (not starting with lb://): {}", finalUriToUse);
+        }
+
+        return NimbusJwtDecoder.withJwkSetUri(finalUriToUse).build();
+    }
+
+    @Bean
+    public SecurityFilterChain customApiGatewaySecurityFilterChain(
+            HttpSecurity http,
+            ClaimsToHeadersFilter claimsToHeadersFilter,
+            JwtDecoder jwtDecoder) throws Exception {
         log.info("Configuring SecurityFilterChain for API Gateway (customApiGatewaySecurityFilterChain)...");
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
-                                "/actuator/**", // Añadido para permitir acceso a Actuator endpoints
+                                "/actuator/**",
                                 "/",
                                 "/api/v1/auth/**",
                                 "/swagger-ui.html",
@@ -73,7 +126,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder()))
+                        .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder))
                         .authenticationEntryPoint(customAuthenticationEntryPoint())
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -86,43 +139,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder() {
-        if (!StringUtils.hasText(jwtSecretString)) {
-            log.error("CRITICAL: API Gateway - JWT Secret ('app.jwt.secret') is MISSING or EMPTY. Cannot create JwtDecoder. Application will likely fail to authenticate JWTs.");
-            throw new IllegalStateException(GatewayConstants.JWT_ILLEGAL_STATE_SECRET_MISSING);
-        }
-        log.info("API Gateway JwtDecoder: Initializing with configured JWT secret for algorithm {}.", JWT_ALGORITHM);
-        byte[] keyBytes = jwtSecretString.getBytes(StandardCharsets.UTF_8);
-        SecretKey secretKey = new SecretKeySpec(keyBytes, JWT_ALGORITHM);
-        return NimbusJwtDecoder.withSecretKey(secretKey).build();
-    }
-
-    @Bean
-    public SecretKey sharedSecretKey() {
-        if (!StringUtils.hasText(jwtSecretString)) {
-            log.error("CRITICAL: API Gateway - JWT Secret ('app.jwt.secret') is MISSING or EMPTY. Cannot create SharedSecretKey bean.");
-            throw new IllegalStateException(GatewayConstants.JWT_ILLEGAL_STATE_SHARED_SECRET_MISSING);
-        }
-        byte[] keyBytes = jwtSecretString.getBytes(StandardCharsets.UTF_8);
-        SecretKey secretKey = new SecretKeySpec(keyBytes, JWT_ALGORITHM);
-        log.info("Shared SecretKey Bean (API Gateway) created for {} algorithm.", JWT_ALGORITHM);
-        return secretKey;
-    }
-
-    @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
         if (StringUtils.hasText(allowedOrigins)) {
             List<String> allowedOriginList = Arrays.stream(allowedOrigins.split(","))
                     .map(String::trim)
                     .collect(Collectors.toList());
             configuration.setAllowedOrigins(allowedOriginList);
+            log.info("CORS configured for origins: {}", allowedOriginList);
         } else {
-            log.warn("No se han configurado orígenes permitidos para CORS. Se permitirán todos los orígenes.");
+            log.warn("No explicit origins configured for CORS ('app.allowed-origins' is empty). Permitting all origins ('*'). This is not recommended for production.");
             configuration.setAllowedOrigins(List.of("*"));
         }
-
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", "X-User-Id", "X-User-Roles"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type", "X-User-Id", "X-User-Roles"));
@@ -131,10 +159,9 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-        log.info("Fuente de configuracion CORS registrada para todas las rutas ('/**').");
+        log.info("CORS configuration source registered for all paths ('/**').");
         return source;
     }
-
 
     @Bean
     public AuthenticationEntryPoint customAuthenticationEntryPoint() {
@@ -146,7 +173,7 @@ public class SecurityConfig {
             }
 
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
 
             String errorCodeValue = GatewayConstants.ERROR_CODE_AUTH_GENERIC;
             String errorTitle = GatewayConstants.ERROR_TITLE_AUTH_GENERIC;
@@ -173,7 +200,7 @@ public class SecurityConfig {
                     errorCodeValue = GatewayConstants.ERROR_CODE_JWT_VALIDATION_FAILED;
                     errorTitle = GatewayConstants.ERROR_TITLE_JWT_VALIDATION_FAILED;
                     String validationErrors = jwtValEx.getErrors().stream()
-                            .map(e -> e.getDescription() + " (Código de Error: " + e.getErrorCode() + ")")
+                            .map(e -> e.getDescription() + " (Error Code: " + e.getErrorCode() + ")")
                             .collect(Collectors.joining("; "));
                     errorDetails = GatewayConstants.ERROR_DETAILS_JWT_VALIDATION_FAILED_PREFIX + validationErrors;
                 } else if (cause instanceof IllegalArgumentException && cause.getMessage() != null && cause.getMessage().contains("JWT String argument cannot be null or empty")) {
@@ -197,7 +224,7 @@ public class SecurityConfig {
             );
 
             try {
-                response.getOutputStream().println(objectMapper.writeValueAsString(errorResponse));
+                response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
             } catch (IOException e) {
                 log.error(GatewayConstants.LOG_ERROR_WRITING_AUTH_RESPONSE, e);
             }
