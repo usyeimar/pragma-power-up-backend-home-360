@@ -51,8 +51,11 @@ public class NeighborhoodUseCase implements NeighborhoodServicePort {
     }
 
     @Override
-    public Optional<NeighborhoodModel> getNeighborhoodById(Long id) {
-        return neighborhoodPersistencePort.getNeighborhoodById(id);
+    public NeighborhoodModel getNeighborhoodById(Long id) {
+        return neighborhoodPersistencePort.getNeighborhoodById(id)
+                .orElseThrow(() -> new ModelNotFoundException(
+                        String.format(NEIGHBORHOOD_NOT_FOUND, id)
+                ));
     }
 
     @Override

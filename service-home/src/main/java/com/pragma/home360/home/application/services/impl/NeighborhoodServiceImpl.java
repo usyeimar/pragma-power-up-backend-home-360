@@ -46,13 +46,11 @@ public class NeighborhoodServiceImpl implements NeighborhoodService {
 
     @Override
     public NeighborhoodResponse getNeighborhoodById(Long id) {
-        NeighborhoodModel neighborhoodModel = neighborhoodServicePort.getNeighborhoodById(id)
-                .orElseThrow(() -> new ModelNotFoundException(String.format(NEIGHBORHOOD_NOT_FOUND, id)));
+        NeighborhoodModel neighborhoodModel = neighborhoodServicePort.getNeighborhoodById(id);
 
         NeighborhoodResponse baseResponse = neighborhoodDtoMapper.toResponse(neighborhoodModel);
 
-        cityServicePort.getCityById(baseResponse.city().id())
-                .orElseThrow(() -> new ModelNotFoundException(String.format(NEIGHBORHOOD_NOT_FOUND, id)));
+        cityServicePort.getCityById(baseResponse.city().id());
 
         return new NeighborhoodResponse(
                 baseResponse.id(),

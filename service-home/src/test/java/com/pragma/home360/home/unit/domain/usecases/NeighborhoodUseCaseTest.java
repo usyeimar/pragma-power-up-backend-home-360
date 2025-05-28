@@ -229,18 +229,20 @@ class NeighborhoodUseCaseTest {
         @DisplayName("Debería retornar el barrio cuando existe")
         void getNeighborhoodById_NeighborhoodExists_ShouldReturnNeighborhood() {
             when(neighborhoodPersistencePort.getNeighborhoodById(any(Long.class))).thenReturn(Optional.of(validNeighborhood));
-            Optional<NeighborhoodModel> result = neighborhoodUseCase.getNeighborhoodById(validNeighborhood.getId());
-            assertTrue(result.isPresent());
-            assertEquals(validNeighborhood.getId(), result.get().getId());
+            NeighborhoodModel result = neighborhoodUseCase.getNeighborhoodById(validNeighborhood.getId());
+
+            assertEquals(validNeighborhood.getId(), result.getId());
         }
 
         @Test
-        @DisplayName("Debería retornar Optional vacío cuando el barrio no existe")
+        @DisplayName("Debería retornar ModelNotFoundException si el barrio no existe")
         void getNeighborhoodById_NeighborhoodDoesNotExist_ShouldReturnEmptyOptional() {
             Long neighborhoodId = 999L;
             when(neighborhoodPersistencePort.getNeighborhoodById(neighborhoodId)).thenReturn(Optional.empty());
-            Optional<NeighborhoodModel> result = neighborhoodUseCase.getNeighborhoodById(neighborhoodId);
-            assertFalse(result.isPresent());
+            assertThrows(ModelNotFoundException.class,
+                    () -> neighborhoodUseCase.getNeighborhoodById(neighborhoodId),
+                    String.format(DomainConstants.NEIGHBORHOOD_NOT_FOUND, neighborhoodId)
+            );
         }
     }
 

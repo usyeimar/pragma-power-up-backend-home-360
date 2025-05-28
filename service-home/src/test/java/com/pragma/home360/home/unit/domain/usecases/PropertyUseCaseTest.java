@@ -275,11 +275,13 @@ class PropertyUseCaseTest {
         }
 
         @Test
-        @DisplayName("Debería retornar nulo cuando la propiedad no existe")
+        @DisplayName("Debería retornar ModelNotFoundException cuando la propiedad no existe")
         void getPropertyById_PropertyDoesNotExist_ShouldReturnNull() {
             when(propertyPersistencePort.getPropertyById(999L)).thenReturn(Optional.empty());
-            PropertyModel result = propertyUseCase.getPropertyById(999L);
-            assertNull(result);
+            assertThrows(
+                    ModelNotFoundException.class,
+                    () -> propertyUseCase.getPropertyById(999L)
+            );
             verify(propertyPersistencePort).getPropertyById(999L);
         }
     }
@@ -373,7 +375,7 @@ class PropertyUseCaseTest {
         void updateProperty_ValidData_ShouldUpdateAndSetStatus() {
             when(propertyPersistencePort.getPropertyById(1L)).thenReturn(Optional.of(existingProperty));
             when(categoryPersistencePort.getCategoryById(2L)).thenReturn(Optional.of(new CategoryModel(2L, "New Category", "Desc")));
-            when(locationPersistencePort.getLocationById(2L)).thenReturn(Optional.of(new LocationModel(2L, "New Address", 0.0,0.0,null,null,null,null)));
+            when(locationPersistencePort.getLocationById(2L)).thenReturn(Optional.of(new LocationModel(2L, "New Address", 0.0, 0.0, null, null, null, null)));
             doNothing().when(propertyPersistencePort).updateProperty(anyLong(), any(PropertyModel.class));
 
             propertyUseCase.updateProperty(1L, updateData);

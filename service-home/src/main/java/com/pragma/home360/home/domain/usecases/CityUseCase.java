@@ -57,13 +57,9 @@ public class CityUseCase implements CityServicePort {
     }
 
     @Override
-    public Optional<CityModel> getCityById(Long id) {
+    public CityModel getCityById(Long id) {
         return cityPersistencePort.getCityById(id)
-                .or(() -> {
-                    throw new ModelNotFoundException(
-                            String.format(CITY_NOT_FOUND, id)
-                    );
-                });
+                .orElseThrow(() -> new ModelNotFoundException(String.format(CITY_NOT_FOUND, id)));
     }
 
     @Override

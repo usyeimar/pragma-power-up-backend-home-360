@@ -11,7 +11,7 @@ public interface CityServicePort {
 
     PagedResult<CityModel> getAllCities(int page, int size);
 
-    Optional<CityModel> getCityById(Long id);
+    CityModel getCityById(Long id);
 
     long getCityCount();
 }

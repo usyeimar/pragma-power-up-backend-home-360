@@ -56,12 +56,7 @@ public class CityServiceImpl implements CityService {
 
     @Override
     public CityResponse getCityById(Long id) {
-        CityModel cityModel = cityServicePort.getCityById(id)
-                .orElse(null); // Use Optional to handle the case when the city is not found
-
-        if (cityModel == null) {
-            throw new ModelNotFoundException(String.format("City with id %d not found", id));
-        }
+        CityModel cityModel = cityServicePort.getCityById(id);
         return cityDtoMapper.modelToResponse(cityModel);
     }
 }

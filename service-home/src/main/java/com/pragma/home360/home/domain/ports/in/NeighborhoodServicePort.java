@@ -10,7 +10,7 @@ public interface NeighborhoodServicePort {
 
     NeighborhoodModel saveNeighborhood(NeighborhoodModel neighborhood);
 
-    Optional<NeighborhoodModel> getNeighborhoodById(Long id);
+    NeighborhoodModel getNeighborhoodById(Long id);
 
 
     PagedResult<NeighborhoodModel> getAllNeighborhoods(FilterModel filter);

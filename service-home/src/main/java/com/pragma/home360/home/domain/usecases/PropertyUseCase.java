@@ -84,9 +84,8 @@ public class PropertyUseCase implements PropertyServicePort {
 
     @Override
     public PropertyModel getPropertyById(Long id) {
-        PropertyModel propertyModel = propertyPersistencePort.getPropertyById(id)
-                .orElse(null);
-        return propertyModel;
+        return propertyPersistencePort.getPropertyById(id)
+                .orElseThrow(() -> new ModelNotFoundException(String.format(PROPERTY_NOT_FOUND_BY_ID, id)));
     }
 
     @Override
@@ -116,19 +115,7 @@ public class PropertyUseCase implements PropertyServicePort {
         validateNotEmpty(propertyModel.getName(), PROPERTY_NAME_CANNOT_BE_EMPTY);
 
         LocalDate today = LocalDate.now();
-        LocalDate activeDate = propertyModel.getActivePublicationDate();
-
-        if (activeDate == null) {
-            throw new ValidationException(PROPERTY_ACTIVE_DATE_REQUIRED);
-        }
-
-        if (existingProperty.getPublicationStatus() == PropertyPublicationStatus.PUBLISHED && activeDate.isBefore(today)) {
-            if (!activeDate.isEqual(existingProperty.getActivePublicationDate())) {
-                throw new ValidationException(PROPERTY_CANNOT_CHANGE_ACTIVE_DATE_TO_PAST);
-            }
-        } else if (activeDate.isBefore(today)) {
-            throw new ValidationException(PROPERTY_ACTIVE_DATE_IN_PAST);
-        }
+        LocalDate activeDate = getLocalDate(propertyModel, existingProperty, today);
 
         if (activeDate.isAfter(today.plusMonths(1))) {
             throw new ValidationException(PROPERTY_ACTIVE_DATE_EXCEEDS_LIMIT);
@@ -162,6 +149,23 @@ public class PropertyUseCase implements PropertyServicePort {
         propertyModel.setCreatedAt(existingProperty.getCreatedAt());
 
         propertyPersistencePort.updateProperty(id, propertyModel);
+    }
+
+    private static LocalDate getLocalDate(PropertyModel propertyModel, PropertyModel existingProperty, LocalDate today) {
+        LocalDate activeDate = propertyModel.getActivePublicationDate();
+
+        if (activeDate == null) {
+            throw new ValidationException(PROPERTY_ACTIVE_DATE_REQUIRED);
+        }
+
+        if (existingProperty.getPublicationStatus() == PropertyPublicationStatus.PUBLISHED && activeDate.isBefore(today)) {
+            if (!activeDate.isEqual(existingProperty.getActivePublicationDate())) {
+                throw new ValidationException(PROPERTY_CANNOT_CHANGE_ACTIVE_DATE_TO_PAST);
+            }
+        } else if (activeDate.isBefore(today)) {
+            throw new ValidationException(PROPERTY_ACTIVE_DATE_IN_PAST);
+        }
+        return activeDate;
     }
 
     @Override

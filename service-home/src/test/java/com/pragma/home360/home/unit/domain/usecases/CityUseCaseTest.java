@@ -140,22 +140,23 @@ class CityUseCaseTest {
         void getCityById_CityExists_ShouldReturnCity() {
             when(cityPersistencePort.getCityById(any(Long.class))).thenReturn(Optional.of(validCity));
 
-            Optional<CityModel> result = cityUseCase.getCityById(validCity.getId());
+            CityModel result = cityUseCase.getCityById(validCity.getId());
 
-            assertTrue(result.isPresent());
-            assertEquals(validCity.getId(), result.get().getId());
+            assertNotNull(result);
+            assertEquals(validCity.getId(), result.getId());
             verify(cityPersistencePort).getCityById(validCity.getId());
         }
 
         @Test
-        @DisplayName("Debería retornar Optional vacío cuando la ciudad no existe")
+        @DisplayName("Debería retornar ModelNotFoundException cuando la ciudad no existe")
         void getCityById_CityDoesNotExist_ShouldReturnEmptyOptional() {
             Long cityId = 999L;
             when(cityPersistencePort.getCityById(cityId)).thenReturn(Optional.empty());
 
-            Optional<CityModel> result = cityUseCase.getCityById(cityId);
-
-            assertFalse(result.isPresent());
+            assertThrows(
+                    ModelNotFoundException.class,
+                    () -> cityUseCase.getCityById(cityId)
+            );
         }
     }
 
