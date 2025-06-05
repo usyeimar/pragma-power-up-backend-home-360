@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Map;
 
 @RestController
+@Hidden
 public class JwksController {
 
     private final JwtTokenProvider jwtTokenProvider;

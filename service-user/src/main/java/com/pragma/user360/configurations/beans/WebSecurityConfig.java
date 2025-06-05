@@ -3,7 +3,7 @@ package com.pragma.user360.configurations.beans;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.user360.infrastructure.adapters.security.JwtAuthenticationFilter;
 import com.pragma.user360.infrastructure.exceptionshandler.ExceptionResponse;
-import com.pragma.user360.infrastructure.utils.constants.InfraestructureConstants; // Importar constantes
+import com.pragma.user360.infrastructure.utils.constants.InfraestructureConstants; 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,6 +46,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/swagger-resources/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/webjars/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/sign-up").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/sign-in").permitAll()
