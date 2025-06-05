@@ -40,4 +40,6 @@ public class InfraestructureConstants {
     public static final String ERROR_INTERNAL_SERVER_NULL_DETAIL = "Ocurrió un error interno inesperado (referencia nula).";
 
 
+    public static final String ERROR_USER_LOCKED_TITLE = "Usuario bloqueado";
+    public static final String ERROR_USER_LOCKED_DETAIL = "El usuario está bloqueado y no puede realizar esta acción.";
 }

@@ -3,8 +3,8 @@ spring:
     name: service-user
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/services_user}
-    username: ${SPRING_DATASOURCE_USERNAME:karenyulier}
-    password: ${SPRING_DATASOURCE_PASSWORD:12345678}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
 
   jpa:
     hibernate:
